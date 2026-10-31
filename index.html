@@ -212,6 +212,22 @@
     .svt{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:8px}
     .svd{font-size:13px;color:var(--t2);line-height:1.65}
 
+    /* ── MEET THE TEAM ── pulled live from the practitioners table
+       (patient-portal's admin Practitioners screen) via the public
+       team-directory Edge Function -- see the script block near the
+       bottom of this file. Add/edit/deactivate someone there and this
+       section updates on next page load, nothing to maintain here. */
+    .team{background:var(--bg-s);padding:100px 5%;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+    .tg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:46px}
+    .tm{border:1px solid var(--bd);border-radius:3px;padding:28px 24px;background:var(--bg-c);text-align:center;transition:border-color .2s,transform .25s,box-shadow .25s}
+    .tm:hover{border-color:var(--bd2);transform:translateY(-4px);box-shadow:0 24px 48px -28px rgba(204,39,42,.3)}
+    .tm-photo,.tm-photo-fallback{width:88px;height:88px;border-radius:50%;margin:0 auto 18px;display:block}
+    .tm-photo{object-fit:cover;border:1px solid var(--bd2)}
+    .tm-photo-fallback{display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;color:#fff}
+    .tm-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:8px}
+    .tm-bio{font-size:13px;color:var(--t2);line-height:1.65}
+    .team-status{font-size:13px;color:var(--t2);margin-top:30px;grid-column:1/-1}
+
     /* ── MEASURE/TRAIN/REBOUND section divider ── */
     .mtr-bar{display:flex;background:#000;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);overflow:hidden}
     .mtr-item{flex:1;padding:24px 0;text-align:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(18px,2.5vw,28px);letter-spacing:.18em;text-transform:uppercase;position:relative;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -331,6 +347,7 @@
     <li><a href="#about">About</a></li>
     <li><a href="#ecosystem">What I Do</a></li>
     <li><a href="#services">Services</a></li>
+    <li><a href="#team">Team</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
   <div class="nav-actions">
@@ -343,6 +360,7 @@
   <a href="#about">About</a>
   <a href="#ecosystem">What I Do</a>
   <a href="#services">Services</a>
+  <a href="#team">Team</a>
   <a href="#contact">Contact</a>
   <a href="#" id="faqOpenBtnMobile">Ask Us a Question</a>
 </div>
@@ -496,6 +514,15 @@
   </div>
 </section>
 
+<!-- ══ TEAM ════════════════════════════════════ -->
+<section class="team" id="team">
+  <div class="ey2 reveal" style="--rd:0">Who You'll Work With</div>
+  <h2 class="reveal" style="--rd:0">Meet the Team</h2>
+  <div class="tg" id="teamGrid">
+    <p class="team-status">Loading the team&hellip;</p>
+  </div>
+</section>
+
 <!-- ══ NOTIFY ══════════════════════════════════ -->
 <section class="notify" id="notify">
   <div class="ni reveal" style="--rd:0">
@@ -625,7 +652,7 @@ mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
 
 // active nav link highlighting on scroll
 const navLinks=document.querySelectorAll('.nav-links a, #mobileMenu a');
-const sections=['about','ecosystem','services','contact'].map(id=>document.getElementById(id)).filter(Boolean);
+const sections=['about','ecosystem','services','team','contact'].map(id=>document.getElementById(id)).filter(Boolean);
 if('IntersectionObserver' in window && sections.length){
   const secObs=new IntersectionObserver((entries)=>{
     entries.forEach(en=>{
@@ -726,6 +753,66 @@ async function doContact(e){
     b.disabled=false; b.textContent=orig;
   }
 }
+</script>
+
+<!-- ══ Meet the Team — populated live from the practitioners table
+     via the public team-directory Edge Function (patient-portal/supabase/
+     functions/team-directory). Own small IntersectionObserver rather than
+     reusing the page's main one above (`revObs`) -- that one is declared
+     inside its own if/else block, so it isn't reachable from here. ══ -->
+<script>
+(function(){
+  const grid=document.getElementById('teamGrid');
+  if(!grid)return;
+
+  function escapeHtmlT(str){
+    const div=document.createElement('div');
+    div.textContent=str||'';
+    return div.innerHTML;
+  }
+
+  function initials(name){
+    return (name||'').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  }
+
+  let teamObs=null;
+  if(!reduceMotion && 'IntersectionObserver' in window){
+    teamObs=new IntersectionObserver((entries)=>{
+      entries.forEach(en=>{
+        if(en.isIntersecting){en.target.classList.add('in');teamObs.unobserve(en.target)}
+      });
+    },{threshold:0.15,rootMargin:'0px 0px -60px 0px'});
+  }
+
+  fetch(LANDING_EDGE_FUNCTIONS_URL+'/team-directory')
+    .then(res=>res.json())
+    .then(data=>{
+      const team=data.team||[];
+      if(!team.length){
+        grid.innerHTML='<p class="team-status">Team details coming soon.</p>';
+        return;
+      }
+      grid.innerHTML=team.map((p,i)=>{
+        const photo=p.photo_url
+          ? `<img class="tm-photo" src="${p.photo_url}" alt="${escapeHtmlT(p.name)}" />`
+          : `<div class="tm-photo-fallback" style="background:${p.colour_hex||'#CC272A'}">${initials(p.name)}</div>`;
+        return `
+          <div class="tm reveal" style="--rd:${i%6}">
+            ${photo}
+            <div class="tm-name">${escapeHtmlT(p.name)}</div>
+            ${p.bio?`<p class="tm-bio">${escapeHtmlT(p.bio)}</p>`:''}
+          </div>
+        `;
+      }).join('');
+      grid.querySelectorAll('.reveal').forEach(el=>{
+        if(teamObs){teamObs.observe(el)}else{el.classList.add('in')}
+      });
+    })
+    .catch(err=>{
+      console.error('team-directory fetch failed', err);
+      grid.innerHTML='<p class="team-status">Couldn\'t load the team right now.</p>';
+    });
+})();
 </script>
 
 <!-- ══ Ask Us a Question — chat popup logic ══════
