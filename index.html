@@ -333,6 +333,55 @@
     .faq-send:disabled{opacity:.5;cursor:default}
     @media(max-width:600px){.faq-modal{height:calc(100vh - 40px)}}
     @media(prefers-reduced-motion:reduce){.faq-dots span{animation:none;opacity:.7}}
+
+    /* ── BOOK A SESSION picker ── Service > Availability > Practitioner
+       (2026-10-31, Josh's ask). Reuses the faq-overlay's modal mechanics
+       (same fade/scale-in, same colour tokens) so it feels like the same
+       product, not a bolted-on widget. The actual booking confirmation
+       still happens in Cal.com's own native popup -- this only narrows
+       down what/when/who before handing off to that proven pipeline. */
+    .book-overlay{position:fixed;inset:0;z-index:999997;background:rgba(6,5,4,.72);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .25s}
+    .book-overlay.open{display:flex}
+    .book-overlay.show{opacity:1}
+    .book-modal{width:560px;max-width:100%;height:620px;max-height:calc(100vh - 40px);background:var(--bg-c);border:1px solid var(--bd2);border-radius:6px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+    .book-overlay.show .book-modal{transform:translateY(0) scale(1)}
+    .book-head{background:linear-gradient(160deg,rgba(204,39,42,.16),var(--bg-c) 70%);border-bottom:1px solid var(--bd);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+    .book-head-t{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.04em;color:var(--text)}
+    .book-head-s{font-size:11px;color:var(--t2);letter-spacing:.04em;margin-top:2px}
+    .book-close{background:none;border:none;color:var(--t2);font-size:22px;line-height:1;cursor:pointer;padding:4px;transition:color .2s}
+    .book-close:hover{color:var(--text)}
+    .book-steps{display:flex;gap:6px;padding:14px 20px 0;flex-shrink:0}
+    .book-step-pill{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:5px 10px;border:1px solid var(--bd2);border-radius:20px;display:flex;align-items:center;gap:5px}
+    .book-step-pill.active{color:var(--text);border-color:var(--red)}
+    .book-step-pill.done{color:var(--t2);border-color:var(--bd2)}
+    .book-back{background:none;border:none;color:var(--t2);font-size:12px;letter-spacing:.03em;cursor:pointer;padding:16px 20px 0;text-align:left;font-family:'Barlow',sans-serif;transition:color .2s}
+    .book-back:hover{color:var(--text)}
+    .book-body{flex:1;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px}
+    .book-loading,.book-empty{color:var(--t2);font-size:13px;text-align:center;padding:60px 20px}
+    .book-error{color:var(--red-b);font-size:13px;text-align:center;padding:40px 20px;display:flex;flex-direction:column;gap:12px;align-items:center}
+    .svc-pick-card{border:1px solid var(--bd);border-radius:4px;padding:16px 18px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s;text-align:left}
+    .svc-pick-card:hover{border-color:var(--red);background:var(--bg-c)}
+    .svc-pick-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
+    .svc-pick-meta{font-size:11px;color:var(--t2);margin-top:4px;letter-spacing:.02em}
+    .svc-pick-desc{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.5}
+    .day-group{margin-bottom:4px}
+    .day-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+    .time-row{display:flex;flex-wrap:wrap;gap:8px}
+    .time-pill{background:var(--bg-s);border:1px solid var(--bd2);color:var(--text);padding:8px 12px;border-radius:3px;font-size:13px;font-family:'Barlow',sans-serif;cursor:pointer;transition:border-color .2s,background .2s;display:flex;align-items:center;gap:6px}
+    .time-pill:hover{border-color:var(--red);background:var(--bg-c)}
+    .time-pill .badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px}
+    .prac-pick-card{border:1px solid var(--bd);border-radius:4px;padding:16px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s;display:flex;gap:14px;align-items:center;text-align:left}
+    .prac-pick-card:hover{border-color:var(--red);background:var(--bg-c)}
+    .prac-pick-photo,.prac-pick-photo-fallback{width:52px;height:52px;border-radius:50%;flex-shrink:0}
+    .prac-pick-photo{object-fit:cover;border:1px solid var(--bd2)}
+    .prac-pick-photo-fallback{display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:#fff}
+    .prac-pick-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
+    .prac-pick-bio{font-size:12px;color:var(--t2);margin-top:3px;line-height:1.5}
+    .book-confirm-note{font-size:12px;color:var(--t2);line-height:1.6;text-align:center;padding:4px 10px 14px}
+    .book-confirm-btn{background:var(--red);color:#fff;border:none;border-radius:3px;padding:13px 20px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .2s;width:100%}
+    .book-confirm-btn:hover{background:var(--red-b)}
+    .book-retry{background:transparent;border:1px solid var(--bd2);color:var(--text);padding:8px 18px;border-radius:3px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif}
+    @media(max-width:600px){.book-modal{height:calc(100vh - 40px)}}
   </style>
 </head>
 <body>
@@ -352,7 +401,7 @@
   </ul>
   <div class="nav-actions">
     <button type="button" class="ncta-ghost" id="faqOpenBtn">Ask Us a Question</button>
-    <a href="#contact" class="ncta" data-cal-link="rebound-medicine-and-performance" data-cal-namespace="" data-cal-config='{"layout":"month_view"}'>Book a Session<svg class="arw" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    <a href="#contact" class="ncta" data-book-trigger="1">Book a Session<svg class="arw" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
   </div>
   <button id="navToggle" class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobileMenu"><span></span></button>
 </nav>
@@ -380,7 +429,7 @@
       Biomechanics assessment, strength training, and sports therapy, all working together for athletes who compete.
     </p>
     <div class="ctas reveal" style="--rd:2">
-      <a href="#contact" class="bp" data-cal-link="rebound-medicine-and-performance" data-cal-namespace="" data-cal-config='{"layout":"month_view"}'>Book a Session<svg class="arw" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a href="#contact" class="bp" data-book-trigger="1">Book a Session<svg class="arw" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       <a href="#ecosystem" class="bs">What I Do</a>
     </div>
     <div class="stats reveal" style="--rd:3">
@@ -448,7 +497,7 @@
       <div class="en">Rebound Medicine<br>&amp; Performance</div>
       <p class="edc">My primary practice. Sports therapy, rehabilitation, and S&amp;C coaching for athletes and active individuals at every level, from acute injury management through to return-to-sport and long-term conditioning.</p>
       <ul class="esv"><li>Sports Therapy</li><li>Injury Rehabilitation</li><li>S&amp;C Programming</li><li>Concussion Management</li><li>Return to Sport</li><li>Performance Assessments</li></ul>
-      <a href="#" class="evlink" data-cal-link="rebound-medicine-and-performance" data-cal-namespace="" data-cal-config='{"layout":"month_view"}'>Book a session →</a>
+      <a href="#" class="evlink" data-book-trigger="1">Book a session →</a>
     </div>
     <div class="ec ev reveal" style="--rd:1">
       <div class="em"><img src="tile-icon-evolve.png" alt="" aria-hidden="true"></div>
@@ -592,6 +641,31 @@
   </ul>
   <p class="fc">© 2026 Rebound Medicine &amp; Performance · Est. 2024</p>
 </footer>
+
+<!-- ══ BOOK A SESSION picker — Service > Availability > Practitioner
+     (2026-10-31, Josh's ask). Backed by the public-booking Edge Function
+     (read-only: which services are bookable, and who's open when). Ends by
+     handing off to Cal.com's own native popup for the chosen
+     practitioner/service so name/email/phone collection and confirmation
+     stay on the one proven pipeline — see js further down for why. ══ -->
+<div class="book-overlay" id="bookOverlay" role="dialog" aria-modal="true" aria-label="Book a session">
+  <div class="book-modal">
+    <div class="book-head">
+      <div>
+        <div class="book-head-t" id="bookHeadTitle">Book a Session</div>
+        <div class="book-head-s" id="bookHeadSub">What are you booking in for?</div>
+      </div>
+      <button type="button" class="book-close" id="bookCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="book-steps">
+      <span class="book-step-pill" data-step-pill="service">1. Service</span>
+      <span class="book-step-pill" data-step-pill="availability">2. Availability</span>
+      <span class="book-step-pill" data-step-pill="practitioner">3. Practitioner</span>
+    </div>
+    <button type="button" class="book-back" id="bookBackBtn" style="display:none">&larr; Back</button>
+    <div class="book-body" id="bookBody"></div>
+  </div>
+</div>
 
 <!-- ══ ASK US A QUESTION — FAQ chat popup ══════ -->
 <div class="faq-overlay" id="faqOverlay" role="dialog" aria-modal="true" aria-label="Ask Rebound a question">
@@ -931,6 +1005,272 @@ async function doContact(e){
     } finally {
       sendBtn.disabled = false;
     }
+  });
+})();
+</script>
+
+<!-- ══ Book A Session picker logic ══════
+     Service > Availability > Practitioner, backed by the public-booking
+     Edge Function (read-only). The final step hands off into Cal.com's own
+     native popup. There's no documented Cal() instruction to open an
+     arbitrary calLink programmatically on demand (checked the official
+     "Embed instructions" page 2026-10-31 -- only inline/ui/preload/
+     closeModal exist) -- the real mechanism this page already relies on for
+     its static "Book a Session" buttons is Cal's own delegated click
+     listener on any element carrying data-cal-link. So the confirm step
+     below builds a real <a> with both a working href (cal.com/user/slug,
+     guaranteed correct, same URL shape as every practitioner's public
+     booking page) AND the data-cal-link attributes, then clicks it: if
+     Cal's script intercepts the click, the popup opens inline; if it
+     doesn't for any reason, the href still takes the patient to a real,
+     working booking page instead of silently doing nothing. ══ -->
+<script>
+(function(){
+  var triggers = document.querySelectorAll('[data-book-trigger]');
+  if(!triggers.length) return;
+
+  var overlay = document.getElementById('bookOverlay');
+  var body = document.getElementById('bookBody');
+  var backBtn = document.getElementById('bookBackBtn');
+  var headTitle = document.getElementById('bookHeadTitle');
+  var headSub = document.getElementById('bookHeadSub');
+  var pills = {
+    service: document.querySelector('[data-step-pill="service"]'),
+    availability: document.querySelector('[data-step-pill="availability"]'),
+    practitioner: document.querySelector('[data-step-pill="practitioner"]')
+  };
+  var stepOrder = ['service', 'availability', 'practitioner'];
+
+  var state = {};
+  function resetState(){
+    state = { services: [], selectedService: null, slots: [], selectedSlot: null };
+  }
+
+  function escapeHtml(str){
+    var div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  function setStep(step){
+    Object.keys(pills).forEach(function(k){
+      pills[k].classList.remove('active', 'done');
+      if(stepOrder.indexOf(k) < stepOrder.indexOf(step)) pills[k].classList.add('done');
+      if(k === step) pills[k].classList.add('active');
+    });
+    backBtn.style.display = step === 'service' ? 'none' : '';
+  }
+
+  function showLoading(msg){
+    body.innerHTML = '<div class="book-loading">' + escapeHtml(msg || 'Loading…') + '</div>';
+  }
+
+  function showError(msg, retry){
+    body.innerHTML = '';
+    var wrap = document.createElement('div');
+    wrap.className = 'book-error';
+    var p = document.createElement('p');
+    p.textContent = msg;
+    wrap.appendChild(p);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'book-retry';
+    btn.textContent = 'Try again';
+    btn.addEventListener('click', retry);
+    wrap.appendChild(btn);
+    body.appendChild(wrap);
+  }
+
+  async function callPublicBooking(action, payload){
+    var res = await fetch(LANDING_EDGE_FUNCTIONS_URL + '/public-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action: action }, payload))
+    });
+    var json = await res.json();
+    if(!res.ok || json.error) throw new Error(json.error || 'Something went wrong');
+    return json;
+  }
+
+  function openBooker(){
+    resetState();
+    overlay.classList.add('open');
+    requestAnimationFrame(function(){ overlay.classList.add('show'); });
+    loadServices();
+  }
+
+  function closeBooker(){
+    overlay.classList.remove('show');
+    setTimeout(function(){ overlay.classList.remove('open'); }, 250);
+  }
+
+  async function loadServices(){
+    setStep('service');
+    headTitle.textContent = 'Book a Session';
+    headSub.textContent = 'What are you booking in for?';
+    showLoading('Loading services…');
+    try {
+      var result = await callPublicBooking('list_services', {});
+      state.services = result.services || [];
+      renderServices();
+    } catch(err){
+      console.error('booker: list_services failed', err);
+      showError("Couldn't load services right now — check your connection and try again.", loadServices);
+    }
+  }
+
+  function renderServices(){
+    body.innerHTML = '';
+    if(!state.services.length){
+      body.innerHTML = '<div class="book-empty">Nothing bookable online right now — email us and we\'ll sort you out.</div>';
+      return;
+    }
+    state.services.forEach(function(svc){
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'svc-pick-card';
+      var metaParts = [];
+      if(svc.durationMinutes) metaParts.push(svc.durationMinutes + ' min');
+      if(svc.priceCents) metaParts.push('£' + (svc.priceCents / 100).toFixed(2));
+      var html = '<div class="svc-pick-name">' + escapeHtml(svc.name) + '</div>';
+      if(metaParts.length) html += '<div class="svc-pick-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>';
+      if(svc.description) html += '<div class="svc-pick-desc">' + escapeHtml(svc.description) + '</div>';
+      card.innerHTML = html;
+      card.addEventListener('click', function(){
+        state.selectedService = svc;
+        loadAvailability();
+      });
+      body.appendChild(card);
+    });
+  }
+
+  async function loadAvailability(){
+    setStep('availability');
+    headTitle.textContent = state.selectedService.name;
+    headSub.textContent = 'Pick a time';
+    showLoading('Checking availability…');
+    try {
+      var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Europe/London';
+      var result = await callPublicBooking('get_availability', { serviceId: state.selectedService.id, timeZone: tz });
+      state.slots = result.slots || [];
+      renderAvailability();
+    } catch(err){
+      console.error('booker: get_availability failed', err);
+      showError("Couldn't load availability right now — check your connection and try again.", loadAvailability);
+    }
+  }
+
+  function renderAvailability(){
+    setStep('availability');
+    body.innerHTML = '';
+    if(!state.slots.length){
+      body.innerHTML = '<div class="book-empty">No open times in the next couple of weeks — email us and we\'ll find something that works.</div>';
+      return;
+    }
+    var byDay = [];
+    var byDayIndex = {};
+    state.slots.forEach(function(slot){
+      var d = new Date(slot.start);
+      var dayKey = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      if(!(dayKey in byDayIndex)){
+        byDayIndex[dayKey] = byDay.length;
+        byDay.push({ label: dayKey, slots: [] });
+      }
+      byDay[byDayIndex[dayKey]].slots.push(slot);
+    });
+    byDay.forEach(function(day){
+      var group = document.createElement('div');
+      group.className = 'day-group';
+      var label = document.createElement('div');
+      label.className = 'day-label';
+      label.textContent = day.label;
+      group.appendChild(label);
+      var row = document.createElement('div');
+      row.className = 'time-row';
+      day.slots.forEach(function(slot){
+        var d = new Date(slot.start);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'time-pill';
+        var timeStr = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        var html = escapeHtml(timeStr);
+        if(slot.practitioners.length > 1) html += '<span class="badge">' + slot.practitioners.length + '</span>';
+        btn.innerHTML = html;
+        btn.addEventListener('click', function(){
+          state.selectedSlot = slot;
+          renderPractitionerStep();
+        });
+        row.appendChild(btn);
+      });
+      group.appendChild(row);
+      body.appendChild(group);
+    });
+  }
+
+  function renderPractitionerStep(){
+    setStep('practitioner');
+    headTitle.textContent = state.selectedService.name;
+    var d = new Date(state.selectedSlot.start);
+    headSub.textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) +
+      ' at ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    body.innerHTML = '';
+    var note = document.createElement('div');
+    note.className = 'book-confirm-note';
+    note.textContent = state.selectedSlot.practitioners.length > 1
+      ? "More than one of us is free then — pick who you'd like."
+      : "You'll finish booking on Cal.com's own booking page.";
+    body.appendChild(note);
+    state.selectedSlot.practitioners.forEach(function(p){
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'prac-pick-card';
+      var photo = p.photoUrl
+        ? '<img class="prac-pick-photo" src="' + p.photoUrl + '" alt="" />'
+        : '<div class="prac-pick-photo-fallback" style="background:' + (p.colourHex || '#CC272A') + '">' + escapeHtml((p.name || '?').charAt(0)) + '</div>';
+      var html = photo + '<div><div class="prac-pick-name">' + escapeHtml(p.name) + '</div>';
+      if(p.bio) html += '<div class="prac-pick-bio">' + escapeHtml(p.bio) + '</div>';
+      html += '</div>';
+      card.innerHTML = html;
+      card.addEventListener('click', function(){ confirmBooking(p); });
+      body.appendChild(card);
+    });
+  }
+
+  function confirmBooking(practitioner){
+    closeBooker();
+    if(!practitioner.calComUsername || !state.selectedService.slug){
+      console.error('booker: missing username or slug for handoff', practitioner, state.selectedService);
+      return;
+    }
+    var calLink = practitioner.calComUsername + '/' + state.selectedService.slug;
+    var link = document.createElement('a');
+    link.href = 'https://cal.com/' + calLink;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.setAttribute('data-cal-link', calLink);
+    link.setAttribute('data-cal-namespace', '');
+    link.setAttribute('data-cal-config', JSON.stringify({ layout: 'month_view' }));
+    link.style.position = 'fixed';
+    link.style.left = '-9999px';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function(){ link.remove(); }, 1000);
+  }
+
+  triggers.forEach(function(el){
+    el.addEventListener('click', function(e){ e.preventDefault(); openBooker(); });
+  });
+  document.getElementById('bookCloseBtn').addEventListener('click', closeBooker);
+  backBtn.addEventListener('click', function(){
+    if(overlay.querySelector('.book-step-pill[data-step-pill="practitioner"]').classList.contains('active')){
+      renderAvailability();
+    } else {
+      loadServices();
+    }
+  });
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) closeBooker(); });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && overlay.classList.contains('open')) closeBooker();
   });
 })();
 </script>
