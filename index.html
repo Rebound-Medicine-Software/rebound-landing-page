@@ -356,8 +356,14 @@
       --t3:   #A89F8E;
       --bd:   #E6DFD0;
       --bd2:  #D9D0BC;
-      width:560px;max-width:100%;height:620px;max-height:calc(100vh - 40px);background:var(--bg-c);border:1px solid var(--bd2);border-radius:6px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+      width:560px;max-width:100%;height:620px;max-height:calc(100vh - 40px);background:var(--bg-c);border:1px solid var(--bd2);border-radius:6px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .25s cubic-bezier(.16,1,.3,1),width .25s ease,height .25s ease}
     .book-overlay.show .book-modal{transform:translateY(0) scale(1)}
+    /* The final "Confirm" step embeds Cal.com's actual calendar/time grid
+       inline (Josh, 2026-11-01: never leave this page to book) -- that widget
+       needs real room to render its own date grid + time list side by side,
+       so the modal grows for this one step only and shrinks back on Back. */
+    .book-modal.wide{width:760px;height:680px}
+    .book-inline-embed{width:100%;height:100%;min-height:480px;flex:1}
     .book-head{background:linear-gradient(160deg,rgba(204,39,42,.16),var(--bg-c) 70%);border-bottom:1px solid var(--bd);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
     .book-head-t{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.04em;color:var(--text)}
     .book-head-s{font-size:11px;color:var(--t2);letter-spacing:.04em;margin-top:2px}
@@ -677,6 +683,7 @@
       <span class="book-step-pill" data-step-pill="service">1. Service</span>
       <span class="book-step-pill" data-step-pill="availability">2. Availability</span>
       <span class="book-step-pill" data-step-pill="practitioner">3. Practitioner</span>
+      <span class="book-step-pill" data-step-pill="confirm">4. Confirm</span>
     </div>
     <button type="button" class="book-back" id="bookBackBtn" style="display:none">&larr; Back</button>
     <div class="book-body" id="bookBody"></div>
@@ -1053,13 +1060,15 @@ async function doContact(e){
   var pills = {
     service: document.querySelector('[data-step-pill="service"]'),
     availability: document.querySelector('[data-step-pill="availability"]'),
-    practitioner: document.querySelector('[data-step-pill="practitioner"]')
+    practitioner: document.querySelector('[data-step-pill="practitioner"]'),
+    confirm: document.querySelector('[data-step-pill="confirm"]')
   };
-  var stepOrder = ['service', 'availability', 'practitioner'];
+  var stepOrder = ['service', 'availability', 'practitioner', 'confirm'];
+  var modalEl = document.querySelector('.book-modal');
 
   var state = {};
   function resetState(){
-    state = { services: [], selectedService: null, slots: [], selectedSlot: null };
+    state = { services: [], selectedService: null, slots: [], selectedSlot: null, selectedPractitioner: null };
   }
 
   function escapeHtml(str){
@@ -1096,6 +1105,9 @@ async function doContact(e){
       if(k === step) pills[k].classList.add('active');
     });
     backBtn.style.display = step === 'service' ? 'none' : '';
+    // The Confirm step embeds Cal's own calendar widget, which needs more
+    // room than the picker steps -- widen only while that step is showing.
+    if(modalEl) modalEl.classList.toggle('wide', step === 'confirm');
   }
 
   function showLoading(msg){
@@ -1138,7 +1150,7 @@ async function doContact(e){
 
   function closeBooker(){
     overlay.classList.remove('show');
-    setTimeout(function(){ overlay.classList.remove('open'); }, 250);
+    setTimeout(function(){ overlay.classList.remove('open'); if(modalEl) modalEl.classList.remove('wide'); }, 250);
   }
 
   async function loadServices(){
@@ -1285,7 +1297,7 @@ async function doContact(e){
     note.className = 'book-confirm-note';
     note.textContent = state.selectedSlot.practitioners.length > 1
       ? "More than one of us is free then — pick who you'd like."
-      : "You'll finish booking on Cal.com's own booking page.";
+      : "One last step to confirm — you won't leave this page.";
     body.appendChild(note);
     state.selectedSlot.practitioners.forEach(function(p){
       var card = document.createElement('button');
@@ -1304,39 +1316,43 @@ async function doContact(e){
   }
 
   function confirmBooking(practitioner){
-    closeBooker();
     if(!practitioner.calComUsername || !state.selectedService.slug){
       console.error('booker: missing username or slug for handoff', practitioner, state.selectedService);
       return;
     }
-    // Josh, 2026-11-01: the popup was never actually intercepting the click --
-    // it was landing on Cal.com's own page in a new tab every time. Root
-    // cause: data-cal-namespace was set to '' (empty string), which is not a
-    // registered namespace (Cal's embed script only recognises the default/
-    // global instance -- the one Cal("init", {...}) set up with no namespace
-    // argument at the top of this file -- or a name previously registered via
-    // Cal("init", "name", {...})). An unrecognised namespace means Cal's
-    // click listener never claims the click, so the plain href+target=_blank
-    // fallback fired every single time. Removing the namespace attribute lets
-    // this element fall into the default namespace that's already
-    // initialized, so Cal's own delegated click listener picks it up and
-    // opens the booking flow as an inline popup on this page instead.
-    // target='_blank' stays only as a last-resort fallback for the rare case
-    // where Cal's script fails to load at all (e.g. blocked by an ad
-    // blocker) -- if Cal does intercept the click (the normal case now),
-    // preventDefault() stops the href from ever firing, so target is moot.
+    // Josh, 2026-11-01: the hidden-link-click trick (and the namespace fix
+    // on top of it) never actually worked -- live-testing showed it kept
+    // opening Cal.com's own page in a new tab every time, because that
+    // "any element with data-cal-link gets auto-wired" behaviour isn't
+    // something Cal's embed script actually does for a link created and
+    // clicked entirely in code. Replaced it with the one mechanism Cal.com
+    // documents for this exact job: Cal("inline", {...}), which renders
+    // their real booking calendar straight into a container div on this
+    // page -- nothing to intercept, so there's no click to fail to catch,
+    // and the patient genuinely never leaves this site. The one trade-off:
+    // Cal.com has no way to be told "jump straight to this exact slot" (no
+    // documented URL/config param for it), so the patient re-confirms the
+    // date/time inside Cal's own calendar here -- same date they just
+    // picked above, just reconfirmed in Cal's own UI as part of booking.
+    state.selectedPractitioner = practitioner;
+    setStep('confirm');
+    headTitle.textContent = state.selectedService.name;
+    headSub.textContent = 'Confirm with ' + practitioner.name;
+    body.innerHTML = '';
+    var container = document.createElement('div');
+    container.className = 'book-inline-embed';
+    // Fresh id each time so a patient going Back and picking a different
+    // practitioner/time gets a brand-new embed rather than Cal trying to
+    // reuse a container whose previous iframe was already torn down when
+    // body.innerHTML was cleared above.
+    container.id = 'calInlineEmbed-' + Date.now();
+    body.appendChild(container);
     var calLink = practitioner.calComUsername + '/' + state.selectedService.slug;
-    var link = document.createElement('a');
-    link.href = 'https://cal.com/' + calLink;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.setAttribute('data-cal-link', calLink);
-    link.setAttribute('data-cal-config', JSON.stringify({ layout: 'month_view' }));
-    link.style.position = 'fixed';
-    link.style.left = '-9999px';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(function(){ link.remove(); }, 1000);
+    Cal('inline', {
+      elementOrSelector: '#' + container.id,
+      calLink: calLink,
+      config: { layout: 'month_view' }
+    });
   }
 
   triggers.forEach(function(el){
@@ -1344,7 +1360,9 @@ async function doContact(e){
   });
   document.getElementById('bookCloseBtn').addEventListener('click', closeBooker);
   backBtn.addEventListener('click', function(){
-    if(overlay.querySelector('.book-step-pill[data-step-pill="practitioner"]').classList.contains('active')){
+    if(pills.confirm.classList.contains('active')){
+      renderPractitionerStep();
+    } else if(pills.practitioner.classList.contains('active')){
       renderAvailability();
     } else {
       loadServices();
