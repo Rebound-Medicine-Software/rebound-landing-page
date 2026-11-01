@@ -374,9 +374,12 @@
     .book-error{color:var(--red-b);font-size:13px;text-align:center;padding:40px 20px;display:flex;flex-direction:column;gap:12px;align-items:center}
     .svc-pick-card{border:1px solid var(--bd);border-radius:4px;padding:16px 18px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s;text-align:left}
     .svc-pick-card:hover{border-color:var(--red);background:var(--bg-c)}
+    .svc-pick-card:focus-visible{outline:2px solid var(--red);outline-offset:2px}
     .svc-pick-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:16px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
     .svc-pick-meta{font-size:11px;color:var(--t2);margin-top:4px;letter-spacing:.02em}
-    .svc-pick-desc{font-size:12px;color:var(--t2);margin-top:6px;line-height:1.5}
+    .svc-pick-more{background:none;border:none;padding:0;margin-top:8px;color:var(--red);font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif;transition:color .2s}
+    .svc-pick-more:hover{color:var(--red-b);text-decoration:underline}
+    .svc-pick-desc{font-size:12px;color:var(--t2);margin-top:8px;line-height:1.5}
     .day-group{margin-bottom:4px}
     .day-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
     .time-row{display:flex;flex-wrap:wrap;gap:8px}
@@ -1160,20 +1163,50 @@ async function doContact(e){
       return;
     }
     state.services.forEach(function(svc){
-      var card = document.createElement('button');
-      card.type = 'button';
+      // A div, not a button -- the description toggle below needs its own
+      // clickable control nested inside, and a <button> can't contain
+      // another interactive element (invalid HTML, breaks click handling).
+      // role="button" + tabindex + the keydown handler below keep it
+      // keyboard-selectable like a real button.
+      var card = document.createElement('div');
       card.className = 'svc-pick-card';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
       var metaParts = [];
       if(svc.durationMinutes) metaParts.push(svc.durationMinutes + ' min');
       if(svc.priceCents) metaParts.push('£' + (svc.priceCents / 100).toFixed(2));
       var html = '<div class="svc-pick-name">' + escapeHtml(svc.name) + '</div>';
       if(metaParts.length) html += '<div class="svc-pick-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>';
-      if(svc.description) html += '<div class="svc-pick-desc">' + formatRichText(svc.description) + '</div>';
+      if(svc.description){
+        html += '<button type="button" class="svc-pick-more">View more information</button>';
+        html += '<div class="svc-pick-desc" hidden>' + formatRichText(svc.description) + '</div>';
+      }
       card.innerHTML = html;
-      card.addEventListener('click', function(){
+
+      function selectThis(){
         state.selectedService = svc;
         loadAvailability();
+      }
+      card.addEventListener('click', function(e){
+        if(e.target.closest('.svc-pick-more')) return; // the toggle below handles its own click
+        selectThis();
       });
+      card.addEventListener('keydown', function(e){
+        if((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.svc-pick-more')){
+          e.preventDefault();
+          selectThis();
+        }
+      });
+      var moreBtn = card.querySelector('.svc-pick-more');
+      if(moreBtn){
+        moreBtn.addEventListener('click', function(e){
+          e.stopPropagation(); // don't also trigger card selection
+          var desc = card.querySelector('.svc-pick-desc');
+          var opening = desc.hidden;
+          desc.hidden = !opening;
+          moreBtn.textContent = opening ? 'Hide information' : 'View more information';
+        });
+      }
       body.appendChild(card);
     });
   }
@@ -1276,13 +1309,28 @@ async function doContact(e){
       console.error('booker: missing username or slug for handoff', practitioner, state.selectedService);
       return;
     }
+    // Josh, 2026-11-01: the popup was never actually intercepting the click --
+    // it was landing on Cal.com's own page in a new tab every time. Root
+    // cause: data-cal-namespace was set to '' (empty string), which is not a
+    // registered namespace (Cal's embed script only recognises the default/
+    // global instance -- the one Cal("init", {...}) set up with no namespace
+    // argument at the top of this file -- or a name previously registered via
+    // Cal("init", "name", {...})). An unrecognised namespace means Cal's
+    // click listener never claims the click, so the plain href+target=_blank
+    // fallback fired every single time. Removing the namespace attribute lets
+    // this element fall into the default namespace that's already
+    // initialized, so Cal's own delegated click listener picks it up and
+    // opens the booking flow as an inline popup on this page instead.
+    // target='_blank' stays only as a last-resort fallback for the rare case
+    // where Cal's script fails to load at all (e.g. blocked by an ad
+    // blocker) -- if Cal does intercept the click (the normal case now),
+    // preventDefault() stops the href from ever firing, so target is moot.
     var calLink = practitioner.calComUsername + '/' + state.selectedService.slug;
     var link = document.createElement('a');
     link.href = 'https://cal.com/' + calLink;
     link.target = '_blank';
     link.rel = 'noopener';
     link.setAttribute('data-cal-link', calLink);
-    link.setAttribute('data-cal-namespace', '');
     link.setAttribute('data-cal-config', JSON.stringify({ layout: 'month_view' }));
     link.style.position = 'fixed';
     link.style.left = '-9999px';
