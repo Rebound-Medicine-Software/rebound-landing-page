@@ -1410,7 +1410,7 @@ async function doContact(e){
       '<div class="book-field"><label for="bcName">Your name</label><input id="bcName" type="text" required autocomplete="name" /></div>' +
       '<div class="book-field"><label for="bcEmail">Email address</label><input id="bcEmail" type="email" required autocomplete="email" /></div>' +
       '<div class="book-field"><label for="bcPhone">Phone number</label><input id="bcPhone" type="tel" autocomplete="tel" /></div>' +
-      '<div class="book-field"><label for="bcNotes">Additional notes</label><textarea id="bcNotes" placeholder="Anything that will help us prepare for your session"></textarea></div>' +
+      '<div class="book-field"><label for="bcNotes">What would you like us to know?</label><textarea id="bcNotes" required placeholder="e.g. the injury or area you' + "'" + 'd like assessed, or anything that will help us prepare for your session"></textarea></div>' +
       '<div class="book-field"><label for="bcConsent">Rebound will use AI to record and summarise this session to help with clinical note-taking, in line with UK GDPR. The recording is not stored after your notes are drafted. Do you consent?</label>' +
       '<select id="bcConsent" required><option value="">Select…</option><option value="yes">Yes, I consent</option><option value="no">No, please don’t record</option></select></div>' +
       (priced ? '<div class="book-field"><label>Payment</label><div class="book-pay-element" id="bookPayElement"><div class="book-loading" style="padding:4px 0;font-size:13px">Loading payment form…</div></div></div>' : '') +
@@ -1449,6 +1449,16 @@ async function doContact(e){
       errorEl.style.display = 'none';
       var consentVal = document.getElementById('bcConsent').value;
       if(!consentVal){ showFormError('Please answer the consent question above.'); return; }
+      // 2026-11-01: Cal.com's event type for this service has required
+      // custom booking questions (what Cal.com calls "title" and "notes")
+      // that this one free-text box answers on the backend (see
+      // create_booking's dynamic bookingFields lookup in
+      // public-booking/index.ts) -- enforcing it here, before Stripe ever
+      // takes payment, is what actually prevents the "payment succeeded but
+      // booking failed" failure this was causing live, since by the time
+      // create_booking runs the charge has already gone through.
+      var notesVal = document.getElementById('bcNotes').value.trim();
+      if(!notesVal){ showFormError('Please let us know what this session is for before continuing.'); return; }
 
       var submitBtn = document.getElementById('bookConfirmSubmit');
       var originalLabel = submitBtn.textContent;
