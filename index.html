@@ -6,6 +6,13 @@
   <title>Rebound Medicine & Performance | Josh</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&family=Poppins:wght@300;400;500;800&display=swap" rel="stylesheet">
+  <!-- Cal Sans -- Cal.com's own open-source UI typeface (github.com/calcom/sans), loaded via
+       Fontsource's CDN build. Used ONLY inside the Book a Session modal (see .book-head-t below),
+       specifically so the chrome around Cal's own embedded calendar in step 4 doesn't visually
+       clash with Cal's real UI once it renders inline (Josh, 2026-11-01). Only ships weight 400,
+       so it's used for the modal title only, not swapped in for buttons/labels/body copy that
+       rely on a bold weight -- the rest of the modal keeps Barlow for that reason. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/cal-sans@5.3.0/index.css">
   <style>
     /* Nexus Hub's real brand typeface, pulled from their own portal loading screen */
     @font-face {
@@ -367,6 +374,14 @@
     .book-head{background:linear-gradient(160deg,rgba(204,39,42,.16),var(--bg-c) 70%);border-bottom:1px solid var(--bd);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
     .book-head-t{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.04em;color:var(--text)}
     .book-head-s{font-size:11px;color:var(--t2);letter-spacing:.04em;margin-top:2px}
+    /* Cal Sans only on the Confirm step's own title/subtitle -- .wide only
+       applies while that step is showing (see setStep()), and that's the
+       text sitting immediately next to Cal's real rendered embed, so
+       matching its typeface there is what actually closes the "two
+       different systems" look Josh flagged, without re-typesetting
+       everything else in the modal (buttons/labels keep Barlow). */
+    .book-modal.wide #bookHeadTitle,
+    .book-modal.wide #bookHeadSub{font-family:'Cal Sans','Barlow Condensed',sans-serif}
     .book-close{background:none;border:none;color:var(--t2);font-size:22px;line-height:1;cursor:pointer;padding:4px;transition:color .2s}
     .book-close:hover{color:var(--text)}
     .book-steps{display:flex;gap:6px;padding:14px 20px 0;flex-shrink:0}
@@ -708,20 +723,34 @@
   </div>
 </div>
 
-<!-- ══ Cal.com booking popup — official async loader snippet ══════
-     Loads embed.js lazily (only once a Cal(...) call actually happens, e.g.
-     the first click on a "Book a Session" button) rather than blocking page
-     render for every visitor. Any element with data-cal-link on this page
-     is auto-wired to open the popup — see the nav/hero "Book a Session"
-     buttons and the Rebound ecosystem tile's "Book a session →" link.
-     Same Cal.com username the patient-portal app uses
-     (window.APP_CONFIG.CAL_COM_USERNAME in js/config.js) — this shows all
-     of Josh's public event types, not one specific one, since a marketing
-     page visitor hasn't picked a session type yet. -->
+<!-- ══ Cal.com embed loader — official async snippet ══════
+     Loads embed.js lazily (only once a Cal(...) call actually happens).
+     2026-11-01: every "Book a Session" entry point on this page (nav, hero,
+     ecosystem tile) now opens the picker below via [data-book-trigger], not
+     a direct Cal.com popup -- the picker's own Confirm step is the ONLY
+     place Cal's embed actually renders now (via Cal("inline", ...) in the
+     picker's own script block further down), so the Cal("ui", ...) call
+     right below only ever styles that one surface. -->
 <script>
 (function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === "string") { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ["initNamespace", namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
 Cal("init", { origin: "https://cal.com" });
-Cal("ui", { styles: { branding: { brandColor: "#CC272A" } }, hideEventTypeDetails: false, layout: "month_view" });
+// hideEventTypeDetails: true (Josh, 2026-11-01) -- the picker's own Confirm
+// step already shows the service name + practitioner in its own header by
+// this point, so Cal's own duplicate title/duration/description card was
+// just repeating that right above its calendar -- hiding it tightens the
+// handoff instead of showing the same info twice in two different styles.
+// styles.body/eventTypeListItem backgrounds (the only two properties Cal's
+// own docs say this supports) tinted to match --bg-c so the embed's actual
+// rendered surface blends into the modal instead of sitting on stark white.
+Cal("ui", {
+  styles: {
+    branding: { brandColor: "#CC272A" },
+    body: { background: "#FAF7F1" },
+    eventTypeListItem: { background: "#FAF7F1" },
+  },
+  hideEventTypeDetails: true,
+  layout: "month_view",
+});
 </script>
 
 <script>
