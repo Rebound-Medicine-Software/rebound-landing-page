@@ -1065,6 +1065,27 @@ async function doContact(e){
     return div.innerHTML;
   }
 
+  // Cal.com's own description editor stores rich text as literal markup
+  // inside the plain string (<p>, <br>, and **bold**-style asterisks) --
+  // Cal.com's own UI parses that back into paragraph spacing when it
+  // displays it, ours was just dumping it as visible text (Josh, 2026-11-01).
+  // Escape everything first (so this never lets real HTML/script through),
+  // then safelist exactly this known Cal.com pattern back into real markup.
+  function formatRichText(str){
+    if(!str) return '';
+    var html = escapeHtml(str);
+    html = html
+      .replace(/&lt;p&gt;&lt;br\s*\/?&gt;&lt;\/p&gt;/gi, '<br><br>')
+      .replace(/&lt;p&gt;/gi, '')
+      .replace(/&lt;\/p&gt;/gi, '<br><br>')
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+      .replace(/\*{2,4}([^*]+?)\*{2,4}/g, '<strong>$1</strong>');
+    // Collapse triple-plus <br> runs (adjacent paragraph breaks) to one
+    // blank line, and trim a leading/trailing break left by a wrapping <p>.
+    html = html.replace(/(<br>\s*){3,}/gi, '<br><br>').replace(/^(<br>\s*)+|(<br>\s*)+$/gi, '');
+    return html;
+  }
+
   function setStep(step){
     Object.keys(pills).forEach(function(k){
       pills[k].classList.remove('active', 'done');
@@ -1147,7 +1168,7 @@ async function doContact(e){
       if(svc.priceCents) metaParts.push('£' + (svc.priceCents / 100).toFixed(2));
       var html = '<div class="svc-pick-name">' + escapeHtml(svc.name) + '</div>';
       if(metaParts.length) html += '<div class="svc-pick-meta">' + escapeHtml(metaParts.join(' · ')) + '</div>';
-      if(svc.description) html += '<div class="svc-pick-desc">' + escapeHtml(svc.description) + '</div>';
+      if(svc.description) html += '<div class="svc-pick-desc">' + formatRichText(svc.description) + '</div>';
       card.innerHTML = html;
       card.addEventListener('click', function(){
         state.selectedService = svc;
