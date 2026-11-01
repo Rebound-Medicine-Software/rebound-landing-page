@@ -343,7 +343,20 @@
     .book-overlay{position:fixed;inset:0;z-index:999997;background:rgba(6,5,4,.72);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .25s}
     .book-overlay.open{display:flex}
     .book-overlay.show{opacity:1}
-    .book-modal{width:560px;max-width:100%;height:620px;max-height:calc(100vh - 40px);background:var(--bg-c);border:1px solid var(--bd2);border-radius:6px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+    .book-modal{
+      /* Scoped light palette -- overrides the site's dark --bg-c/--bg-s/--text/etc
+         just inside this popup (Josh, 2026-11-01: "too dark on this pop-up").
+         Every rule below still reads the same var(--bg-c) etc names, so this is
+         the only place that needs to change -- the rest of the modal's CSS
+         cascades from these new values automatically. */
+      --bg-c: #FAF7F1;
+      --bg-s: #F1EBE0;
+      --text: #211E19;
+      --t2:   #6B6356;
+      --t3:   #A89F8E;
+      --bd:   #E6DFD0;
+      --bd2:  #D9D0BC;
+      width:560px;max-width:100%;height:620px;max-height:calc(100vh - 40px);background:var(--bg-c);border:1px solid var(--bd2);border-radius:6px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .25s cubic-bezier(.16,1,.3,1)}
     .book-overlay.show .book-modal{transform:translateY(0) scale(1)}
     .book-head{background:linear-gradient(160deg,rgba(204,39,42,.16),var(--bg-c) 70%);border-bottom:1px solid var(--bd);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
     .book-head-t{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.04em;color:var(--text)}
