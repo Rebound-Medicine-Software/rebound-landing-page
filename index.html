@@ -1329,11 +1329,15 @@ async function doContact(e){
     // documents for this exact job: Cal("inline", {...}), which renders
     // their real booking calendar straight into a container div on this
     // page -- nothing to intercept, so there's no click to fail to catch,
-    // and the patient genuinely never leaves this site. The one trade-off:
-    // Cal.com has no way to be told "jump straight to this exact slot" (no
-    // documented URL/config param for it), so the patient re-confirms the
-    // date/time inside Cal's own calendar here -- same date they just
-    // picked above, just reconfirmed in Cal's own UI as part of booking.
+    // and the patient genuinely never leaves this site. One trade-off
+    // remains: Cal.com has no documented way to jump straight to the exact
+    // TIME slot already picked above, so the patient still taps a time
+    // inside Cal's own calendar here. But Cal's own Booker does read and
+    // honour "month" and "date" query params on the calLink itself to open
+    // straight on the right day (confirmed 2026-11-01 against Cal's own
+    // source -- the Booker validates/consumes both on load) -- appended
+    // below so at least the date-hunting is skipped and the patient lands
+    // straight on the day they already chose, just picking a time on it.
     state.selectedPractitioner = practitioner;
     setStep('confirm');
     headTitle.textContent = state.selectedService.name;
@@ -1347,7 +1351,12 @@ async function doContact(e){
     // body.innerHTML was cleared above.
     container.id = 'calInlineEmbed-' + Date.now();
     body.appendChild(container);
-    var calLink = practitioner.calComUsername + '/' + state.selectedService.slug;
+    var pad2 = function(n){ return n < 10 ? '0' + n : '' + n; };
+    var slotDate = new Date(state.selectedSlot.start);
+    var monthStr = slotDate.getFullYear() + '-' + pad2(slotDate.getMonth() + 1);
+    var dateStr = monthStr + '-' + pad2(slotDate.getDate());
+    var calLink = practitioner.calComUsername + '/' + state.selectedService.slug +
+      '?month=' + monthStr + '&date=' + dateStr;
     Cal('inline', {
       elementOrSelector: '#' + container.id,
       calLink: calLink,
