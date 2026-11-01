@@ -426,6 +426,8 @@
     .book-field input,.book-field textarea,.book-field select{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Barlow',sans-serif;outline:none;transition:border-color .2s}
     .book-field input:focus,.book-field textarea:focus,.book-field select:focus{border-color:var(--red)}
     .book-field textarea{resize:vertical;min-height:60px}
+    .book-field-row{display:flex;gap:10px}
+    .book-field-row .book-field{flex:1;min-width:0}
     .book-pay-element{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:14px;min-height:40px}
     .book-pay-method-choice{display:flex;gap:10px}
     .book-pay-method-option{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:10px 12px;font-size:13px;color:var(--text);cursor:pointer;transition:border-color .2s}
@@ -1412,9 +1414,27 @@ async function doContact(e){
     var form = document.createElement('form');
     form.className = 'book-confirm-form';
     form.innerHTML =
-      '<div class="book-field"><label for="bcName">Your name</label><input id="bcName" type="text" required autocomplete="name" /></div>' +
+      // 2026-11-01, Josh's ask: "I want for every person booking to provide
+      // the following information without fail" -- replaced the single
+      // name/optional-phone fields with the full mandatory intake set
+      // (first/last name, sex, DOB, mobile, structured address). All
+      // required via native HTML5 `required` except address line 2.
+      '<div class="book-field-row">' +
+        '<div class="book-field"><label for="bcFirstName">First name</label><input id="bcFirstName" type="text" required autocomplete="given-name" /></div>' +
+        '<div class="book-field"><label for="bcLastName">Last name</label><input id="bcLastName" type="text" required autocomplete="family-name" /></div>' +
+      '</div>' +
+      '<div class="book-field-row">' +
+        '<div class="book-field"><label for="bcDob">Date of birth</label><input id="bcDob" type="date" required autocomplete="bday" /></div>' +
+        '<div class="book-field"><label for="bcSex">Sex</label><select id="bcSex" required><option value="">Select…</option><option value="male">Male</option><option value="female">Female</option><option value="prefer_not_to_say">Prefer not to say</option></select></div>' +
+      '</div>' +
       '<div class="book-field"><label for="bcEmail">Email address</label><input id="bcEmail" type="email" required autocomplete="email" /></div>' +
-      '<div class="book-field"><label for="bcPhone">Phone number</label><input id="bcPhone" type="tel" autocomplete="tel" /></div>' +
+      '<div class="book-field"><label for="bcMobile">Mobile number</label><input id="bcMobile" type="tel" required autocomplete="tel" /></div>' +
+      '<div class="book-field"><label for="bcAddr1">Address line 1</label><input id="bcAddr1" type="text" required autocomplete="address-line1" /></div>' +
+      '<div class="book-field"><label for="bcAddr2">Address line 2 (optional)</label><input id="bcAddr2" type="text" autocomplete="address-line2" /></div>' +
+      '<div class="book-field-row">' +
+        '<div class="book-field"><label for="bcCity">Town / city</label><input id="bcCity" type="text" required autocomplete="address-level2" /></div>' +
+        '<div class="book-field"><label for="bcPostcode">Postcode</label><input id="bcPostcode" type="text" required autocomplete="postal-code" /></div>' +
+      '</div>' +
       '<div class="book-field"><label for="bcNotes">What would you like us to know?</label><textarea id="bcNotes" required placeholder="e.g. the injury or area you' + "'" + 'd like assessed, or anything that will help us prepare for your session"></textarea></div>' +
       '<div class="book-field"><label for="bcConsent">Rebound will use AI to record and summarise this session to help with clinical note-taking, in line with UK GDPR. The recording is not stored after your notes are drafted. Do you consent?</label>' +
       '<select id="bcConsent" required><option value="">Select…</option><option value="yes">Yes, I consent</option><option value="no">No, please don’t record</option></select></div>' +
@@ -1520,9 +1540,16 @@ async function doContact(e){
           practitionerId: state.selectedPractitioner.id,
           slotStart: state.selectedSlot.start,
           timeZone: (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Europe/London',
-          name: document.getElementById('bcName').value.trim(),
+          firstName: document.getElementById('bcFirstName').value.trim(),
+          lastName: document.getElementById('bcLastName').value.trim(),
           email: document.getElementById('bcEmail').value.trim(),
-          phone: document.getElementById('bcPhone').value.trim(),
+          sex: document.getElementById('bcSex').value,
+          dateOfBirth: document.getElementById('bcDob').value,
+          mobile: document.getElementById('bcMobile').value.trim(),
+          addressLine1: document.getElementById('bcAddr1').value.trim(),
+          addressLine2: document.getElementById('bcAddr2').value.trim(),
+          city: document.getElementById('bcCity').value.trim(),
+          postcode: document.getElementById('bcPostcode').value.trim(),
           notes: notesVal,
           consent: consentVal,
           paymentIntentId: paymentIntentId,
