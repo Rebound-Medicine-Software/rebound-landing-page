@@ -365,12 +365,13 @@
       --bd2:  #D9D0BC;
       width:560px;max-width:100%;height:620px;max-height:calc(100vh - 40px);background:var(--bg-c);border:1px solid var(--bd2);border-radius:6px;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .25s cubic-bezier(.16,1,.3,1),width .25s ease,height .25s ease}
     .book-overlay.show .book-modal{transform:translateY(0) scale(1)}
-    /* The final "Confirm" step embeds Cal.com's actual calendar/time grid
-       inline (Josh, 2026-11-01: never leave this page to book) -- that widget
-       needs real room to render its own date grid + time list side by side,
-       so the modal grows for this one step only and shrinks back on Back. */
-    .book-modal.wide{width:760px;height:680px}
-    .book-inline-embed{width:100%;height:100%;min-height:480px;flex:1}
+    /* The final "Confirm" step holds a form plus (for a priced service)
+       Stripe's own Payment Element -- a little more room than the picker
+       steps reads better here, so the modal grows for this one step only
+       and shrinks back on Back. (2026-11-01: this used to widen for Cal.com's
+       embedded calendar widget -- replaced by our own one-screen confirm +
+       payment, see confirmBooking() below, but the extra room still helps.) */
+    .book-modal.wide{width:560px;height:680px}
     .book-head{background:linear-gradient(160deg,rgba(204,39,42,.16),var(--bg-c) 70%);border-bottom:1px solid var(--bd);padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
     .book-head-t{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;text-transform:uppercase;letter-spacing:.04em;color:var(--text)}
     .book-head-s{font-size:11px;color:var(--t2);letter-spacing:.04em;margin-top:2px}
@@ -415,6 +416,24 @@
     .prac-pick-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
     .prac-pick-bio{font-size:12px;color:var(--t2);margin-top:3px;line-height:1.5}
     .book-confirm-note{font-size:12px;color:var(--t2);line-height:1.6;text-align:center;padding:4px 10px 14px}
+    /* Our own one-screen Confirm form (2026-11-01) -- replaces Cal.com's
+       embedded booking widget so the patient isn't re-picking the date/time
+       they already chose in step 2. Payment, when the service has a price,
+       happens right here too via Stripe's own embedded Payment Element. */
+    .book-confirm-form{display:flex;flex-direction:column;gap:14px}
+    .book-field{display:flex;flex-direction:column;gap:5px}
+    .book-field label{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em}
+    .book-field input,.book-field textarea,.book-field select{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Barlow',sans-serif;outline:none;transition:border-color .2s}
+    .book-field input:focus,.book-field textarea:focus,.book-field select:focus{border-color:var(--red)}
+    .book-field textarea{resize:vertical;min-height:60px}
+    .book-pay-element{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:14px;min-height:40px}
+    .book-confirm-submit{background:var(--red);color:#fff;border:none;border-radius:4px;padding:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:14px;cursor:pointer;transition:opacity .2s}
+    .book-confirm-submit:disabled{opacity:.5;cursor:default}
+    .book-confirm-error{color:#B04B4B;font-size:12px;margin-top:-6px}
+    .book-confirm-success{text-align:center;padding:30px 10px;display:flex;flex-direction:column;align-items:center;gap:10px}
+    .book-confirm-success-icon{width:46px;height:46px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px}
+    .book-confirm-success h3{font-family:'Barlow Condensed',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:.03em;font-size:18px;color:var(--text)}
+    .book-confirm-success p{font-size:13px;color:var(--t2);line-height:1.6}
     .book-confirm-btn{background:var(--red);color:#fff;border:none;border-radius:3px;padding:13px 20px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .2s;width:100%}
     .book-confirm-btn:hover{background:var(--red-b)}
     .book-retry{background:transparent;border:1px solid var(--bd2);color:var(--text);padding:8px 18px;border-radius:3px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif}
@@ -723,34 +742,29 @@
   </div>
 </div>
 
-<!-- ══ Cal.com embed loader — official async snippet ══════
-     Loads embed.js lazily (only once a Cal(...) call actually happens).
-     2026-11-01: every "Book a Session" entry point on this page (nav, hero,
-     ecosystem tile) now opens the picker below via [data-book-trigger], not
-     a direct Cal.com popup -- the picker's own Confirm step is the ONLY
-     place Cal's embed actually renders now (via Cal("inline", ...) in the
-     picker's own script block further down), so the Cal("ui", ...) call
-     right below only ever styles that one surface. -->
+<!-- ══ Stripe.js loader — official async snippet ══════
+     2026-11-01: the picker's Confirm step now takes payment itself via
+     Stripe's embedded Payment Element rather than handing off to Cal.com's
+     booking widget (that used to need Cal's own embed.js, loaded lazily the
+     same way -- removed now that nothing on this page calls Cal(...)
+     anymore; direct cal.com/... links elsewhere still work fine on their
+     own, they never needed this script). Stripe requires js.stripe.com
+     itself (not a bundled/self-hosted copy) to load the payment form, so
+     loading it lazily here -- only once the picker's Confirm step actually
+     needs it -- keeps it off every page view that never reaches checkout. -->
 <script>
-(function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === "string") { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ["initNamespace", namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, "https://app.cal.com/embed/embed.js", "init");
-Cal("init", { origin: "https://cal.com" });
-// hideEventTypeDetails: true (Josh, 2026-11-01) -- the picker's own Confirm
-// step already shows the service name + practitioner in its own header by
-// this point, so Cal's own duplicate title/duration/description card was
-// just repeating that right above its calendar -- hiding it tightens the
-// handoff instead of showing the same info twice in two different styles.
-// styles.body/eventTypeListItem backgrounds (the only two properties Cal's
-// own docs say this supports) tinted to match --bg-c so the embed's actual
-// rendered surface blends into the modal instead of sitting on stark white.
-Cal("ui", {
-  styles: {
-    branding: { brandColor: "#CC272A" },
-    body: { background: "#FAF7F1" },
-    eventTypeListItem: { background: "#FAF7F1" },
-  },
-  hideEventTypeDetails: true,
-  layout: "month_view",
-});
+function loadStripeJs(){
+  if(window.Stripe) return Promise.resolve();
+  if(window.__stripeJsLoading) return window.__stripeJsLoading;
+  window.__stripeJsLoading = new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://js.stripe.com/v3/';
+    s.onload = resolve;
+    s.onerror = function(){ reject(new Error("Couldn't load the payment form -- check your connection and try again.")); };
+    document.head.appendChild(s);
+  });
+  return window.__stripeJsLoading;
+}
 </script>
 
 <script>
@@ -807,6 +821,15 @@ if(reduceMotion || !('IntersectionObserver' in window)){
 // Same Supabase project/functions the rest of this page (Ask Us a Question)
 // and the patient-portal app use — see js/config.js's EDGE_FUNCTIONS_URL.
 const LANDING_EDGE_FUNCTIONS_URL = "https://udoyiifdqwbgihwbosbn.supabase.co/functions/v1";
+
+// 2026-11-01, Josh's "build our own UI" ask -- the booking picker's Confirm
+// step now takes payment itself via Stripe's embedded Payment Element rather
+// than handing off to Cal.com's own booking widget. Publishable keys are
+// designed by Stripe to be public/embeddable in client-side code (same idea
+// as this page's own Supabase URL above) -- safe to ship here, unlike a
+// secret key. This is the TEST-mode key on purpose until Josh has verified
+// the whole flow end-to-end with the 4242 test card and says to go live.
+const STRIPE_PUBLISHABLE_KEY_TEST = "pk_test_51SjK4LDgu3G8Gbh8u3Xw3ZQvCM6VhIBjnnCa2GNK66O1gruhE5HFkwf87z0cMgRufgJlVHQmiPmqXo2rUHYGR9M700Y0imGxvt";
 
 async function doSub(e){
   e.preventDefault();
@@ -1062,20 +1085,18 @@ async function doContact(e){
 </script>
 
 <!-- ══ Book A Session picker logic ══════
-     Service > Availability > Practitioner, backed by the public-booking
-     Edge Function (read-only). The final step hands off into Cal.com's own
-     native popup. There's no documented Cal() instruction to open an
-     arbitrary calLink programmatically on demand (checked the official
-     "Embed instructions" page 2026-10-31 -- only inline/ui/preload/
-     closeModal exist) -- the real mechanism this page already relies on for
-     its static "Book a Session" buttons is Cal's own delegated click
-     listener on any element carrying data-cal-link. So the confirm step
-     below builds a real <a> with both a working href (cal.com/user/slug,
-     guaranteed correct, same URL shape as every practitioner's public
-     booking page) AND the data-cal-link attributes, then clicks it: if
-     Cal's script intercepts the click, the popup opens inline; if it
-     doesn't for any reason, the href still takes the patient to a real,
-     working booking page instead of silently doing nothing. ══ -->
+     Service > Availability > Practitioner > Confirm, backed by the
+     public-booking Edge Function. The confirm step is our own form (not
+     Cal's embed) -- it reuses the exact slot the patient already picked
+     (no redundant re-pick), collects name/email/phone/consent, and for
+     priced services mounts a Stripe Payment Element inline so payment
+     happens without leaving the page. On submit it confirms the Stripe
+     PaymentIntent then calls create_booking, which re-verifies the payment
+     server-side against Stripe before creating the real Cal.com booking
+     via Cal's v2 API. Free services skip Stripe entirely and call
+     create_booking directly. Direct/raw Cal.com links elsewhere on the
+     site (for practitioners who want to share their own booking page) are
+     untouched by any of this. ══ -->
 <script>
 (function(){
   var triggers = document.querySelectorAll('[data-book-trigger]');
@@ -1097,7 +1118,14 @@ async function doContact(e){
 
   var state = {};
   function resetState(){
-    state = { services: [], selectedService: null, slots: [], selectedSlot: null, selectedPractitioner: null };
+    state = {
+      services: [], selectedService: null, slots: [], selectedSlot: null, selectedPractitioner: null,
+      // Stripe bits live on state (not loose module vars) so a fresh
+      // openBooker() -- which calls this -- always starts clean, rather than
+      // a reopened booker accidentally reusing a Stripe Elements instance or
+      // PaymentIntent left over from an earlier, abandoned attempt.
+      stripeInstance: null, stripeElements: null, stripePaymentIntentId: null
+    };
   }
 
   function escapeHtml(str){
@@ -1344,53 +1372,139 @@ async function doContact(e){
     });
   }
 
-  function confirmBooking(practitioner){
-    if(!practitioner.calComUsername || !state.selectedService.slug){
-      console.error('booker: missing username or slug for handoff', practitioner, state.selectedService);
-      return;
+  function formatPrice(cents, currency){
+    try {
+      return new Intl.NumberFormat('en-GB', { style: 'currency', currency: (currency || 'gbp').toUpperCase() }).format(cents / 100);
+    } catch(e){
+      return '£' + (cents / 100).toFixed(2);
     }
-    // Josh, 2026-11-01: the hidden-link-click trick (and the namespace fix
-    // on top of it) never actually worked -- live-testing showed it kept
-    // opening Cal.com's own page in a new tab every time, because that
-    // "any element with data-cal-link gets auto-wired" behaviour isn't
-    // something Cal's embed script actually does for a link created and
-    // clicked entirely in code. Replaced it with the one mechanism Cal.com
-    // documents for this exact job: Cal("inline", {...}), which renders
-    // their real booking calendar straight into a container div on this
-    // page -- nothing to intercept, so there's no click to fail to catch,
-    // and the patient genuinely never leaves this site. One trade-off
-    // remains: Cal.com has no documented way to jump straight to the exact
-    // TIME slot already picked above, so the patient still taps a time
-    // inside Cal's own calendar here. But Cal's own Booker does read and
-    // honour "month" and "date" query params on the calLink itself to open
-    // straight on the right day (confirmed 2026-11-01 against Cal's own
-    // source -- the Booker validates/consumes both on load) -- appended
-    // below so at least the date-hunting is skipped and the patient lands
-    // straight on the day they already chose, just picking a time on it.
+  }
+
+  // 2026-11-01, Josh's "build our own UI" ask: this used to hand off to
+  // Cal.com's own embedded booking widget here, which worked but made the
+  // patient re-pick the exact date/time they'd already chosen in step 2 --
+  // Cal.com has no documented way to deep-link straight past that inside
+  // their embed. Replaced with our own one-screen form that books the
+  // already-chosen slot directly via Cal.com's API (see create_booking in
+  // public-booking/index.ts) and, for a priced service, takes payment itself
+  // via Stripe's embedded Payment Element first -- no second calendar, no
+  // leaving this page either way. Cal.com's own price on the event type is
+  // informational only now; we own payment end-to-end via Stripe.
+  function confirmBooking(practitioner){
     state.selectedPractitioner = practitioner;
     setStep('confirm');
     headTitle.textContent = state.selectedService.name;
-    headSub.textContent = 'Confirm with ' + practitioner.name;
+    var d = new Date(state.selectedSlot.start);
+    headSub.textContent = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) +
+      ' at ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + ' with ' + practitioner.name;
+    renderConfirmForm();
+  }
+
+  function renderConfirmForm(){
     body.innerHTML = '';
-    var container = document.createElement('div');
-    container.className = 'book-inline-embed';
-    // Fresh id each time so a patient going Back and picking a different
-    // practitioner/time gets a brand-new embed rather than Cal trying to
-    // reuse a container whose previous iframe was already torn down when
-    // body.innerHTML was cleared above.
-    container.id = 'calInlineEmbed-' + Date.now();
-    body.appendChild(container);
-    var pad2 = function(n){ return n < 10 ? '0' + n : '' + n; };
-    var slotDate = new Date(state.selectedSlot.start);
-    var monthStr = slotDate.getFullYear() + '-' + pad2(slotDate.getMonth() + 1);
-    var dateStr = monthStr + '-' + pad2(slotDate.getDate());
-    var calLink = practitioner.calComUsername + '/' + state.selectedService.slug +
-      '?month=' + monthStr + '&date=' + dateStr;
-    Cal('inline', {
-      elementOrSelector: '#' + container.id,
-      calLink: calLink,
-      config: { layout: 'month_view' }
+    var priced = !!(state.selectedService.priceCents && state.selectedService.priceCents > 0);
+
+    var form = document.createElement('form');
+    form.className = 'book-confirm-form';
+    form.innerHTML =
+      '<div class="book-field"><label for="bcName">Your name</label><input id="bcName" type="text" required autocomplete="name" /></div>' +
+      '<div class="book-field"><label for="bcEmail">Email address</label><input id="bcEmail" type="email" required autocomplete="email" /></div>' +
+      '<div class="book-field"><label for="bcPhone">Phone number</label><input id="bcPhone" type="tel" autocomplete="tel" /></div>' +
+      '<div class="book-field"><label for="bcNotes">Additional notes</label><textarea id="bcNotes" placeholder="Anything that will help us prepare for your session"></textarea></div>' +
+      '<div class="book-field"><label for="bcConsent">Rebound will use AI to record and summarise this session to help with clinical note-taking, in line with UK GDPR. The recording is not stored after your notes are drafted. Do you consent?</label>' +
+      '<select id="bcConsent" required><option value="">Select…</option><option value="yes">Yes, I consent</option><option value="no">No, please don’t record</option></select></div>' +
+      (priced ? '<div class="book-field"><label>Payment</label><div class="book-pay-element" id="bookPayElement"><div class="book-loading" style="padding:4px 0;font-size:13px">Loading payment form…</div></div></div>' : '') +
+      '<div class="book-confirm-error" id="bookConfirmError" style="display:none"></div>' +
+      '<button type="submit" class="book-confirm-submit" id="bookConfirmSubmit">' +
+      (priced ? 'Pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' &amp; confirm' : 'Confirm booking') +
+      '</button>';
+    body.appendChild(form);
+
+    var errorEl = document.getElementById('bookConfirmError');
+    function showFormError(msg){
+      errorEl.textContent = msg;
+      errorEl.style.display = '';
+    }
+
+    // For a free service there's nothing to wait on; for a priced one, load
+    // Stripe.js and start a PaymentIntent before the patient can submit.
+    var ready = priced
+      ? loadStripeJs()
+          .then(function(){ return callPublicBooking('create_payment_intent', { serviceId: state.selectedService.id }); })
+          .then(function(res){
+            if(res.free) return; // service turned out to be free server-side -- fine, just skip Stripe
+            state.stripeInstance = state.stripeInstance || Stripe(STRIPE_PUBLISHABLE_KEY_TEST);
+            state.stripePaymentIntentId = res.paymentIntentId;
+            state.stripeElements = state.stripeInstance.elements({
+              clientSecret: res.clientSecret,
+              appearance: { theme: 'stripe', variables: { colorPrimary: '#CC272A', fontFamily: 'Barlow, sans-serif', borderRadius: '4px' } }
+            });
+            state.stripeElements.create('payment').mount('#bookPayElement');
+          })
+          .catch(function(err){ showFormError(err.message || 'Could not load the payment form.'); })
+      : Promise.resolve();
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      errorEl.style.display = 'none';
+      var consentVal = document.getElementById('bcConsent').value;
+      if(!consentVal){ showFormError('Please answer the consent question above.'); return; }
+
+      var submitBtn = document.getElementById('bookConfirmSubmit');
+      var originalLabel = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Please wait…';
+
+      function doCreateBooking(paymentIntentId){
+        return callPublicBooking('create_booking', {
+          serviceId: state.selectedService.id,
+          practitionerId: state.selectedPractitioner.id,
+          slotStart: state.selectedSlot.start,
+          timeZone: (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Europe/London',
+          name: document.getElementById('bcName').value.trim(),
+          email: document.getElementById('bcEmail').value.trim(),
+          phone: document.getElementById('bcPhone').value.trim(),
+          notes: document.getElementById('bcNotes').value.trim(),
+          consent: consentVal,
+          paymentIntentId: paymentIntentId
+        });
+      }
+
+      ready
+        .then(function(){
+          if(priced && state.stripeElements){
+            return state.stripeInstance.confirmPayment({ elements: state.stripeElements, redirect: 'if_required' })
+              .then(function(result){
+                if(result.error) throw new Error(result.error.message || 'Payment failed -- please check your card details and try again.');
+                return doCreateBooking(state.stripePaymentIntentId);
+              });
+          }
+          return doCreateBooking(null);
+        })
+        .then(function(res){ renderConfirmSuccess(res.booking); })
+        .catch(function(err){
+          showFormError(err.message || 'Something went wrong -- please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalLabel;
+        });
     });
+  }
+
+  function renderConfirmSuccess(booking){
+    headTitle.textContent = 'Booked';
+    headSub.textContent = '';
+    var start = new Date(booking.start);
+    body.innerHTML =
+      '<div class="book-confirm-success">' +
+        '<div class="book-confirm-success-icon">&#10003;</div>' +
+        '<h3>You’re booked in</h3>' +
+        '<p>' + escapeHtml(booking.serviceName) + ' with ' + escapeHtml(booking.practitionerName) + '<br>' +
+        start.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) +
+        ' at ' + start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + '<br>' +
+        'A confirmation is on its way to your email.</p>' +
+        '<button type="button" class="book-confirm-submit" id="bookDoneBtn" style="max-width:200px">Done</button>' +
+      '</div>';
+    document.getElementById('bookDoneBtn').addEventListener('click', closeBooker);
   }
 
   triggers.forEach(function(el){
