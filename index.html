@@ -427,6 +427,11 @@
     .book-field input:focus,.book-field textarea:focus,.book-field select:focus{border-color:var(--red)}
     .book-field textarea{resize:vertical;min-height:60px}
     .book-pay-element{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:14px;min-height:40px}
+    .book-pay-method-choice{display:flex;gap:10px}
+    .book-pay-method-option{flex:1;display:flex;align-items:center;gap:8px;background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:10px 12px;font-size:13px;color:var(--text);cursor:pointer;transition:border-color .2s}
+    .book-pay-method-option:has(input:checked){border-color:var(--red)}
+    .book-pay-method-option input{margin:0}
+    .book-pay-in-person-note{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:12px 14px;font-size:13px;color:var(--t2)}
     .book-confirm-submit{background:var(--red);color:#fff;border:none;border-radius:4px;padding:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:14px;cursor:pointer;transition:opacity .2s}
     .book-confirm-submit:disabled{opacity:.5;cursor:default}
     .book-confirm-error{color:#B04B4B;font-size:12px;margin-top:-6px}
@@ -1413,7 +1418,25 @@ async function doContact(e){
       '<div class="book-field"><label for="bcNotes">What would you like us to know?</label><textarea id="bcNotes" required placeholder="e.g. the injury or area you' + "'" + 'd like assessed, or anything that will help us prepare for your session"></textarea></div>' +
       '<div class="book-field"><label for="bcConsent">Rebound will use AI to record and summarise this session to help with clinical note-taking, in line with UK GDPR. The recording is not stored after your notes are drafted. Do you consent?</label>' +
       '<select id="bcConsent" required><option value="">Select…</option><option value="yes">Yes, I consent</option><option value="no">No, please don’t record</option></select></div>' +
-      (priced ? '<div class="book-field"><label>Payment</label><div class="book-pay-element" id="bookPayElement"><div class="book-loading" style="padding:4px 0;font-size:13px">Loading payment form…</div></div></div>' : '') +
+      // 2026-11-01, Josh's ask: patients can pay online now or settle up in
+      // person (card or cash) when they arrive -- not every patient wants to
+      // put a card in online for a 30-minute assessment. "Pay now" stays the
+      // pre-selected default since that's what the flow did before this was
+      // added; switching the radio just swaps which block is visible and
+      // what the submit button says, no page reload. Stripe still loads and
+      // a PaymentIntent is still started in the background either way (see
+      // `ready` below) so there's no lag if the patient picks "Pay now" --
+      // the wasted call if they end up choosing "pay in person" instead is a
+      // trivial cost next to that.
+      (priced ?
+        '<div class="book-field"><label>How would you like to pay?</label>' +
+        '<div class="book-pay-method-choice">' +
+          '<label class="book-pay-method-option"><input type="radio" name="bcPayMethod" value="online" checked /> Pay now (card)</label>' +
+          '<label class="book-pay-method-option"><input type="radio" name="bcPayMethod" value="in_person" /> Pay in person (card or cash)</label>' +
+        '</div></div>' +
+        '<div class="book-field" id="bookPayOnlineWrap"><label>Card details</label><div class="book-pay-element" id="bookPayElement"><div class="book-loading" style="padding:4px 0;font-size:13px">Loading payment form…</div></div></div>' +
+        '<div class="book-pay-in-person-note" id="bookPayInPersonNote" style="display:none">You' + "'" + 'll pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' by card or cash when you arrive for your session.</div>'
+      : '') +
       '<div class="book-confirm-error" id="bookConfirmError" style="display:none"></div>' +
       '<button type="submit" class="book-confirm-submit" id="bookConfirmSubmit">' +
       (priced ? 'Pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' &amp; confirm' : 'Confirm booking') +
@@ -1444,6 +1467,30 @@ async function doContact(e){
           .catch(function(err){ showFormError(err.message || 'Could not load the payment form.'); })
       : Promise.resolve();
 
+    // Toggling "Pay now" vs "Pay in person" just swaps which block is
+    // visible and what the submit button says -- the Stripe PaymentIntent
+    // from `ready` above keeps loading in the background regardless, so
+    // switching back to "Pay now" never has to wait.
+    if(priced){
+      var payRadios = form.querySelectorAll('input[name="bcPayMethod"]');
+      var onlineWrap = document.getElementById('bookPayOnlineWrap');
+      var inPersonNote = document.getElementById('bookPayInPersonNote');
+      var updatePayUI = function(){
+        var val = form.querySelector('input[name="bcPayMethod"]:checked').value;
+        var btn = document.getElementById('bookConfirmSubmit');
+        if(val === 'online'){
+          onlineWrap.style.display = '';
+          inPersonNote.style.display = 'none';
+          btn.textContent = 'Pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' & confirm';
+        } else {
+          onlineWrap.style.display = 'none';
+          inPersonNote.style.display = '';
+          btn.textContent = 'Confirm booking (pay in person)';
+        }
+      };
+      payRadios.forEach(function(r){ r.addEventListener('change', updatePayUI); });
+    }
+
     form.addEventListener('submit', function(e){
       e.preventDefault();
       errorEl.style.display = 'none';
@@ -1460,6 +1507,8 @@ async function doContact(e){
       var notesVal = document.getElementById('bcNotes').value.trim();
       if(!notesVal){ showFormError('Please let us know what this session is for before continuing.'); return; }
 
+      var payMethod = priced ? form.querySelector('input[name="bcPayMethod"]:checked').value : 'online';
+
       var submitBtn = document.getElementById('bookConfirmSubmit');
       var originalLabel = submitBtn.textContent;
       submitBtn.disabled = true;
@@ -1474,15 +1523,20 @@ async function doContact(e){
           name: document.getElementById('bcName').value.trim(),
           email: document.getElementById('bcEmail').value.trim(),
           phone: document.getElementById('bcPhone').value.trim(),
-          notes: document.getElementById('bcNotes').value.trim(),
+          notes: notesVal,
           consent: consentVal,
-          paymentIntentId: paymentIntentId
+          paymentIntentId: paymentIntentId,
+          paymentMethod: payMethod
         });
       }
 
       ready
         .then(function(){
-          if(priced && state.stripeElements){
+          // Only go through Stripe at all when the patient actually picked
+          // "Pay now" -- "pay in person" skips straight to booking, same as
+          // a free service does, just with paymentMethod telling the
+          // backend to record the price as owed rather than paid.
+          if(priced && payMethod === 'online' && state.stripeElements){
             return state.stripeInstance.confirmPayment({ elements: state.stripeElements, redirect: 'if_required' })
               .then(function(result){
                 if(result.error) throw new Error(result.error.message || 'Payment failed -- please check your card details and try again.');
