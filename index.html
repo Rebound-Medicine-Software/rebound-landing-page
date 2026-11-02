@@ -478,7 +478,7 @@
   </a>
   <ul class="nav-links">
     <li><a href="#about">About</a></li>
-    <li><a href="#ecosystem">What I Do</a></li>
+    <li><a href="#ecosystem">What We Do</a></li>
     <li><a href="#services">Services</a></li>
     <li><a href="#team">Team</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -491,7 +491,7 @@
 </nav>
 <div class="mobile-menu" id="mobileMenu">
   <a href="#about">About</a>
-  <a href="#ecosystem">What I Do</a>
+  <a href="#ecosystem">What We Do</a>
   <a href="#services">Services</a>
   <a href="#team">Team</a>
   <a href="#contact">Contact</a>
@@ -514,7 +514,7 @@
     </p>
     <div class="ctas reveal" style="--rd:2">
       <a href="#contact" class="bp" data-book-trigger="1">Book a Session<svg class="arw" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-      <a href="#ecosystem" class="bs">What I Do</a>
+      <a href="#ecosystem" class="bs">What We Do</a>
     </div>
     <div class="stats reveal" style="--rd:3">
       <div><div class="sn">BSc<i>.</i></div><div class="sl">Sports Therapy (Hons)</div></div>
@@ -545,10 +545,10 @@
       </div>
     </div>
     <div class="reveal" style="--rd:1">
-      <div class="ey2">Who I Am</div>
+      <div class="ey2">Our Founder</div>
       <div class="an">Joshua<br>Richards-Fisher</div>
       <div class="ar">Graduate Sports Therapist · S&amp;C Coach · Amateur MMA Athlete</div>
-      <p class="ab">I work at the intersection of clinical sports therapy and athletic performance, helping people recover from injury, build physical resilience, and compete at their best. My background spans hands-on clinical work, S&amp;C programming, and sports technology, with a focus on force plate biomechanics and performance data.</p>
+      <p class="ab">Rebound exists at the intersection of clinical sports therapy and athletic performance, helping people recover from injury, build physical resilience, and compete at their best. It's led by Joshua Richards-Fisher, whose background spans hands-on clinical work, S&amp;C programming, and sports technology, with a focus on force plate biomechanics and performance data.</p>
       <p class="ab">I've been competing in MMA at the –70kg amateur level since 2020. That experience shapes everything I do: I know what it takes to train hard, manage your body through a camp, and perform when it matters. That's what I bring to every client relationship.</p>
       <div class="creds">
         <div class="cred">
@@ -571,8 +571,8 @@
 <!-- ══ ECOSYSTEM ═══════════════════════════════ -->
 <section class="eco" id="ecosystem">
   <div class="eh reveal" style="--rd:0">
-    <div><div class="ey2">The Ecosystem</div><h2>Where I Work<br>&amp; What I Build</h2></div>
-    <p class="ed">My work spans clinical practice, performance coaching, community, and sports technology. Here's where you'll find me, and how each piece connects.</p>
+    <div><div class="ey2">The Ecosystem</div><h2>Where We Work<br>&amp; What We Build</h2></div>
+    <p class="ed">Rebound's work spans clinical practice, performance coaching, community, and sports technology. Here's where you'll find us, and how each piece connects.</p>
   </div>
   <div class="eg">
     <div class="ec rb reveal" style="--rd:0">
@@ -719,7 +719,7 @@
   </div>
   <ul class="fls">
     <li><a href="#about">About</a></li>
-    <li><a href="#ecosystem">What I Do</a></li>
+    <li><a href="#ecosystem">What We Do</a></li>
     <li><a href="#services">Services</a></li>
     <li><a href="mailto:reflexsportstherapyy@gmail.com">Email</a></li>
   </ul>
@@ -977,7 +977,7 @@ async function doContact(e){
           <div class="tm reveal" style="--rd:${i%6}">
             ${photo}
             <div class="tm-name">${escapeHtmlT(p.name)}</div>
-            ${p.bio?`<p class="tm-bio">${escapeHtmlT(p.bio)}</p>`:''}
+            ${p.bio?window.reboundBioParagraphs(p.bio).map(para=>`<p class="tm-bio">${escapeHtmlT(para)}</p>`).join(''):''}
           </div>
         `;
       }).join('');
@@ -1029,6 +1029,28 @@ async function doContact(e){
       document.body.style.width = '';
       window.scrollTo(0, savedScrollY);
     }
+  };
+
+  // 2026-11-02, Josh's ask: a practitioner bio typed with paragraph breaks
+  // in the Practitioners admin page (practitioners.html's "pr-bio" textarea)
+  // was rendering as one run-on block on the public site -- HTML collapses
+  // plain whitespace/newlines, and both bio render spots (Meet the Team
+  // below, and the practitioner picker inside the booking flow) were
+  // dumping the raw bio into one paragraph/div element with no paragraph
+  // handling at all. This splits on blank-line breaks first (the natural way to type
+  // paragraphs in a plain textarea); if the bio has none of those -- only
+  // single line breaks -- it falls back to splitting on single newlines
+  // instead, so either typing style comes out right. Returns plain text
+  // paragraphs; each call site still runs its own escaping before using
+  // these (this never produces HTML itself, so it's safe to share across
+  // the two differently-scoped scripts that need it).
+  window.reboundBioParagraphs = function(text){
+    var raw = String(text || '').replace(/\r\n/g, '\n');
+    var blocks = raw.split(/\n\s*\n/).map(function(s){ return s.trim(); }).filter(Boolean);
+    if (blocks.length <= 1) {
+      blocks = raw.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    }
+    return blocks;
   };
 })();
 </script>
@@ -1437,7 +1459,7 @@ async function doContact(e){
         ? '<img class="prac-pick-photo" src="' + p.photoUrl + '" alt="" />'
         : '<div class="prac-pick-photo-fallback" style="background:' + (p.colourHex || '#CC272A') + '">' + escapeHtml((p.name || '?').charAt(0)) + '</div>';
       var html = photo + '<div><div class="prac-pick-name">' + escapeHtml(p.name) + '</div>';
-      if(p.bio) html += '<div class="prac-pick-bio">' + escapeHtml(p.bio) + '</div>';
+      if(p.bio) html += window.reboundBioParagraphs(p.bio).map(function(para){ return '<div class="prac-pick-bio">' + escapeHtml(para) + '</div>'; }).join('');
       html += '</div>';
       card.innerHTML = html;
       card.addEventListener('click', function(){ confirmBooking(p); });
