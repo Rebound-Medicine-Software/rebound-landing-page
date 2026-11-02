@@ -246,10 +246,11 @@
     .tm-photo{object-fit:cover;border:1px solid var(--bd2)}
     .tm-photo-fallback{display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:28px;color:#fff}
     .tm-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px}
-    .tm-title{font-family:'Barlow',sans-serif;font-weight:700;font-size:13px;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;line-height:1.4}
+    .tm-title{font-family:'Barlow',sans-serif;font-weight:700;font-size:14px;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;line-height:1.4}
+    .tm-qualifications{font-family:'Barlow',sans-serif;font-weight:600;font-size:12.5px;color:var(--t2);letter-spacing:.02em;margin-bottom:10px;line-height:1.4}
     .tm-bio-wrap{max-height:54px;overflow:hidden;position:relative;transition:max-height .45s ease;-webkit-mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);mask-image:linear-gradient(to bottom,#000 65%,transparent 100%)}
     .tm--expanded .tm-bio-wrap{max-height:1000px;-webkit-mask-image:none;mask-image:none}
-    .tm-bio{font-size:13px;color:var(--t2);line-height:1.65;text-align:left}
+    .tm-bio{font-size:12px;color:var(--t2);line-height:1.65;text-align:left}
     .tm-expand-hint{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red)}
     .tm-expand-hint svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
     .tm--expanded .tm-expand-hint svg{transform:rotate(180deg)}
@@ -450,8 +451,9 @@
     .prac-pick-photo{object-fit:cover;border:1px solid var(--bd2)}
     .prac-pick-photo-fallback{display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:#fff}
     .prac-pick-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
-    .prac-pick-title{font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.03em;margin-top:3px}
-    .prac-pick-bio{font-size:12px;color:var(--t2);margin-top:3px;line-height:1.5}
+    .prac-pick-title{font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.03em;margin-top:3px}
+    .prac-pick-qualifications{font-size:11.5px;font-weight:600;color:var(--t2);margin-top:2px}
+    .prac-pick-bio{font-size:11px;color:var(--t2);margin-top:3px;line-height:1.5}
     .book-confirm-note{font-size:12px;color:var(--t2);line-height:1.6;text-align:center;padding:4px 10px 14px}
     /* Our own one-screen Confirm form (2026-11-01) -- replaces Cal.com's
        embedded booking widget so the patient isn't re-picking the date/time
@@ -999,7 +1001,8 @@ async function doContact(e){
           <div class="tm reveal" style="--rd:${i%6}" tabindex="0" role="button" aria-expanded="false">
             ${photo}
             <div class="tm-name">${escapeHtmlT(p.name)}</div>
-            ${p.title_qualifications?`<div class="tm-title">${escapeHtmlT(p.title_qualifications)}</div>`:''}
+            ${p.title?`<div class="tm-title">${escapeHtmlT(p.title)}</div>`:''}
+            ${p.qualifications?`<div class="tm-qualifications">${escapeHtmlT(p.qualifications)}</div>`:''}
             ${hasBio?`<div class="tm-bio-wrap">${window.reboundBioParagraphs(p.bio).map(para=>`<p class="tm-bio">${escapeHtmlT(para)}</p>`).join('')}</div>
             <div class="tm-expand-hint"><span>Read bio</span><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`:''}
           </div>
@@ -1515,7 +1518,8 @@ async function doContact(e){
         ? '<img class="prac-pick-photo" src="' + p.photoUrl + '" alt="" />'
         : '<div class="prac-pick-photo-fallback" style="background:' + (p.colourHex || '#CC272A') + '">' + escapeHtml((p.name || '?').charAt(0)) + '</div>';
       var html = photo + '<div><div class="prac-pick-name">' + escapeHtml(p.name) + '</div>';
-      if(p.titleQualifications) html += '<div class="prac-pick-title">' + escapeHtml(p.titleQualifications) + '</div>';
+      if(p.title) html += '<div class="prac-pick-title">' + escapeHtml(p.title) + '</div>';
+      if(p.qualifications) html += '<div class="prac-pick-qualifications">' + escapeHtml(p.qualifications) + '</div>';
       if(p.bio) html += window.reboundBioParagraphs(p.bio).map(function(para){ return '<div class="prac-pick-bio">' + escapeHtml(para) + '</div>'; }).join('');
       html += '</div>';
       card.innerHTML = html;
