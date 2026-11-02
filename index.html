@@ -1585,7 +1585,10 @@ async function doContact(e){
       var html = photo + '<div><div class="prac-pick-name">' + escapeHtml(p.name) + '</div>';
       if(p.title) html += '<div class="prac-pick-title">' + escapeHtml(p.title) + '</div>';
       if(p.qualifications) html += '<div class="prac-pick-qualifications">' + escapeHtml(p.qualifications) + '</div>';
-      if(p.bio) html += window.reboundBioParagraphs(p.bio).map(function(para){ return '<div class="prac-pick-bio">' + escapeHtml(para) + '</div>'; }).join('');
+      // Bio deliberately left out here (Josh, 2026-11-02): "You don't need
+      // the Bio in the Practitioner pop-up for booking. I just want the
+      // Title and Qualifications." Bio still shows on the Meet the Team
+      // section -- this card is just scoped down to Title + Qualifications.
       html += '</div>';
       card.innerHTML = html;
       card.addEventListener('click', function(){ confirmBooking(p); });
