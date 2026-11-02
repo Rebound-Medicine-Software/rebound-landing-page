@@ -445,6 +445,25 @@
     .time-pill{background:var(--bg-s);border:1px solid var(--bd2);color:var(--text);padding:8px 12px;border-radius:3px;font-size:13px;font-family:'Barlow',sans-serif;cursor:pointer;transition:border-color .2s,background .2s;display:flex;align-items:center;gap:6px}
     .time-pill:hover{border-color:var(--red);background:var(--bg-c)}
     .time-pill .badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px}
+    /* Date-first availability picker (task #199, 2026-11-02): dates list as
+       cards, each one opening its own times underneath like an accordion --
+       replaces every day's times being visible at once. */
+    .date-list{display:flex;flex-direction:column;gap:8px}
+    .date-item{border:1px solid var(--bd);border-radius:6px;background:var(--bg-s);overflow:hidden;transition:border-color .2s}
+    .date-item--open{border-color:var(--red)}
+    .date-head{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;background:none;border:none;cursor:pointer;text-align:left;font-family:'Barlow',sans-serif}
+    .date-head-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;width:48px;height:48px;flex-shrink:0;border-radius:6px;background:var(--bg-c);border:1px solid var(--bd2)}
+    .date-head-weekday{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--red)}
+    .date-head-num{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;line-height:1.1;color:var(--text)}
+    .date-head-month{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+    .date-head-info{flex:1}
+    .date-head-full{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
+    .date-head-count{font-size:11px;color:var(--t2);margin-top:2px}
+    .date-head-chevron{width:16px;height:16px;flex-shrink:0;stroke:var(--t2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+    .date-item--open .date-head-chevron{transform:rotate(180deg);stroke:var(--red)}
+    .date-panel{max-height:0;overflow:hidden;transition:max-height .3s ease}
+    .date-item--open .date-panel{max-height:400px}
+    .date-panel-inner{padding:0 14px 14px}
     .prac-pick-card{border:1px solid var(--bd);border-radius:4px;padding:16px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s;display:flex;gap:14px;align-items:center;text-align:left}
     .prac-pick-card:hover{border-color:var(--red);background:var(--bg-c)}
     .prac-pick-photo,.prac-pick-photo-fallback{width:52px;height:52px;border-radius:50%;flex-shrink:0}
@@ -1450,8 +1469,14 @@ async function doContact(e){
     }
   }
 
+  // Date-first picker (task #199): pick a date, then its times open
+  // underneath like an accordion -- instead of every date's times all
+  // showing on screen together. headSub updates to "Pick a time" once a
+  // date is open, same copy as before this changed.
   function renderAvailability(){
     setStep('availability');
+    headTitle.textContent = state.selectedService.name;
+    headSub.textContent = 'Pick a date';
     body.innerHTML = '';
     if(!state.slots.length){
       body.innerHTML = '<div class="book-empty">No open times in the next couple of weeks — email us and we\'ll find something that works.</div>';
@@ -1461,20 +1486,39 @@ async function doContact(e){
     var byDayIndex = {};
     state.slots.forEach(function(slot){
       var d = new Date(slot.start);
-      var dayKey = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      var dayKey = d.toDateString();
       if(!(dayKey in byDayIndex)){
         byDayIndex[dayKey] = byDay.length;
-        byDay.push({ label: dayKey, slots: [] });
+        byDay.push({ date: d, slots: [] });
       }
       byDay[byDayIndex[dayKey]].slots.push(slot);
     });
-    byDay.forEach(function(day){
-      var group = document.createElement('div');
-      group.className = 'day-group';
-      var label = document.createElement('div');
-      label.className = 'day-label';
-      label.textContent = day.label;
-      group.appendChild(label);
+
+    var list = document.createElement('div');
+    list.className = 'date-list';
+
+    byDay.forEach(function(day, idx){
+      var item = document.createElement('div');
+      item.className = 'date-item';
+
+      var head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'date-head';
+      var weekday = day.date.toLocaleDateString(undefined, { weekday: 'short' });
+      var dayNum = day.date.getDate();
+      var month = day.date.toLocaleDateString(undefined, { month: 'short' });
+      var fullDate = day.date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+      head.innerHTML =
+        '<div class="date-head-chip"><span class="date-head-weekday">' + escapeHtml(weekday) + '</span>' +
+        '<span class="date-head-num">' + dayNum + '</span><span class="date-head-month">' + escapeHtml(month) + '</span></div>' +
+        '<div class="date-head-info"><div class="date-head-full">' + escapeHtml(fullDate) + '</div>' +
+        '<div class="date-head-count">' + day.slots.length + ' time' + (day.slots.length === 1 ? '' : 's') + ' available</div></div>' +
+        '<svg class="date-head-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
+      var panel = document.createElement('div');
+      panel.className = 'date-panel';
+      var inner = document.createElement('div');
+      inner.className = 'date-panel-inner';
       var row = document.createElement('div');
       row.className = 'time-row';
       day.slots.forEach(function(slot){
@@ -1492,9 +1536,30 @@ async function doContact(e){
         });
         row.appendChild(btn);
       });
-      group.appendChild(row);
-      body.appendChild(group);
+      inner.appendChild(row);
+      panel.appendChild(inner);
+
+      head.addEventListener('click', function(){
+        var wasOpen = item.classList.contains('date-item--open');
+        list.querySelectorAll('.date-item--open').forEach(function(el){ el.classList.remove('date-item--open'); });
+        if(!wasOpen){
+          item.classList.add('date-item--open');
+          headSub.textContent = 'Pick a time';
+        } else {
+          headSub.textContent = 'Pick a date';
+        }
+      });
+
+      item.appendChild(head);
+      item.appendChild(panel);
+      list.appendChild(item);
+      if(idx === 0){
+        item.classList.add('date-item--open');
+        headSub.textContent = 'Pick a time';
+      }
     });
+
+    body.appendChild(list);
   }
 
   function renderPractitionerStep(){
