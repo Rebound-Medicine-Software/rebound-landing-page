@@ -295,7 +295,7 @@
 
     /* ── RESPONSIVE ── */
     @media(max-width:960px){.ag{grid-template-columns:1fr}.ag .photo-card{max-width:340px}.eh{grid-template-columns:1fr}.eg{grid-template-columns:1fr}.cg{grid-template-columns:1fr}.sg{grid-template-columns:1fr 1fr}}
-    @media(max-width:600px){.nav-links{display:none}.nav-toggle{display:flex}.nav-actions .ncta-ghost{display:none}.stats{gap:26px}.creds{grid-template-columns:1fr}.sg{grid-template-columns:1fr}.nf{flex-direction:column}footer{flex-direction:column;text-align:center}.fls{justify-content:center}.mtr-bar{flex-direction:column}.mtr-item::after{display:none;width:100%;height:1px;bottom:0;top:auto;right:0}.scroll-cue{display:none}}
+    @media(max-width:600px){.nav-links{display:none}.nav-toggle{display:flex}.nav-actions .ncta-ghost{display:none}.stats{gap:26px}.creds{grid-template-columns:1fr}.sg{grid-template-columns:1fr}.nf{flex-direction:column}footer{flex-direction:column;text-align:center}.fls{justify-content:center}.mtr-bar{flex-direction:column}.mtr-item::after{display:none;width:100%;height:1px;bottom:0;top:auto;right:0}.scroll-cue{display:none}.inp,.fi,.ft{font-size:16px}}
     @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1!important;transform:none!important}}
 
     /* ── ASK US A QUESTION — FAQ chat popup ── */
@@ -338,7 +338,23 @@
     .faq-send{background:var(--red);color:#fff;border:none;border-radius:4px;padding:0 18px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .2s}
     .faq-send:hover{background:var(--red-b)}
     .faq-send:disabled{opacity:.5;cursor:default}
-    @media(max-width:600px){.faq-modal{height:calc(100vh - 40px)}}
+    /* 2026-11-02, Josh's ask: on mobile, iOS/Android auto-zoom the whole
+       page when a text input's font-size is under 16px (the faq-input
+       above is 14px) -- that's the "it zooms in" complaint. Also, 100vh on
+       mobile browsers doesn't account for the on-screen keyboard opening
+       (it measures the viewport as if the keyboard weren't there), so the
+       modal was sized taller than what's actually visible once the
+       keyboard is up -- pushing the input (and the Netlify platform badge
+       sitting fixed at the real bottom of the visible viewport) out of
+       sync with each other, which is why the badge appeared to cover the
+       input. 100dvh is the viewport-height unit that DOES shrink with the
+       keyboard; declared after the 100vh fallback so older browsers that
+       don't understand dvh just keep using vh (same two-line
+       progressive-enhancement pattern as everywhere else dvh is used below). */
+    @media(max-width:600px){
+      .faq-modal{height:calc(100vh - 40px);height:calc(100dvh - 40px)}
+      .faq-input{font-size:16px}
+    }
     @media(prefers-reduced-motion:reduce){.faq-dots span{animation:none;opacity:.7}}
 
     /* ── BOOK A SESSION picker ── Service > Availability > Practitioner
@@ -444,7 +460,12 @@
     .book-confirm-btn{background:var(--red);color:#fff;border:none;border-radius:3px;padding:13px 20px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif;transition:background .2s;width:100%}
     .book-confirm-btn:hover{background:var(--red-b)}
     .book-retry{background:transparent;border:1px solid var(--bd2);color:var(--text);padding:8px 18px;border-radius:3px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:'Barlow',sans-serif}
-    @media(max-width:600px){.book-modal{height:calc(100vh - 40px)}}
+    /* Same mobile-zoom + mobile-keyboard-height fix as .faq-modal above,
+       applied to every field in the booking Confirm form (all were 14px). */
+    @media(max-width:600px){
+      .book-modal{height:calc(100vh - 40px);height:calc(100dvh - 40px)}
+      .book-field input,.book-field textarea,.book-field select{font-size:16px}
+    }
   </style>
 </head>
 <body>
@@ -640,7 +661,7 @@
   <div class="ni reveal" style="--rd:0">
     <div class="ey2" style="justify-content:center">Stay Connected</div>
     <h2 style="font-size:clamp(36px,5vw,58px)">Updates Straight<br>to You</h2>
-    <p style="font-size:16px;color:var(--t2);line-height:1.72">Session availability, performance content, and what's happening across Rebound, straight to your inbox.</p>
+    <p style="font-size:16px;color:var(--t2);line-height:1.72">Performance content and what's happening across the Rebound brand, straight to your inbox.</p>
     <!-- Posts to the subscriber-intake edge function — see schema.sql's
          `subscribers` table comment for why there's no email-sending
          integration wired up yet (no provider chosen). This just captures
@@ -971,6 +992,47 @@ async function doContact(e){
 })();
 </script>
 
+<!-- ══ Shared body-scroll lock ══════
+     2026-11-02, Josh's ask: opening the "Ask Us a Question" or "Book a
+     Session" overlay on mobile left the page itself still scrollable
+     underneath -- scrolling inside the modal (or even just the iOS
+     rubber-band overscroll) dragged the whole site up and down behind it.
+     `overflow:hidden` on <body> alone doesn't reliably stop this on iOS
+     Safari (a well-known gap -- it still allows the rubber-band scroll),
+     so this uses the standard position:fixed-with-saved-scroll-offset
+     technique instead, which does. A counter (not a boolean) so if a
+     second overlay somehow opens while one's already open, closing just
+     one doesn't unlock the page under the other. Both modals' open/close
+     functions below call these. -->
+<script>
+(function(){
+  let lockCount = 0;
+  let savedScrollY = 0;
+  window.reboundLockScroll = function(){
+    if (lockCount === 0) {
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + savedScrollY + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+    }
+    lockCount++;
+  };
+  window.reboundUnlockScroll = function(){
+    lockCount = Math.max(0, lockCount - 1);
+    if (lockCount === 0) {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      window.scrollTo(0, savedScrollY);
+    }
+  };
+})();
+</script>
+
 <!-- ══ Ask Us a Question — chat popup logic ══════
      Calls the same public faq-chat Edge Function the patient-portal app
      uses (CORS is already open to any origin, so this works from any
@@ -1028,6 +1090,7 @@ async function doContact(e){
   }
 
   function openFaq(){
+    window.reboundLockScroll();
     overlay.classList.add('open');
     requestAnimationFrame(()=>overlay.classList.add('show'));
     input.focus();
@@ -1041,6 +1104,7 @@ async function doContact(e){
   }
   function closeFaq(){
     overlay.classList.remove('show');
+    window.reboundUnlockScroll();
     setTimeout(()=>overlay.classList.remove('open'), 250);
   }
 
@@ -1206,6 +1270,7 @@ async function doContact(e){
   }
 
   function openBooker(){
+    window.reboundLockScroll();
     resetState();
     overlay.classList.add('open');
     requestAnimationFrame(function(){ overlay.classList.add('show'); });
@@ -1214,6 +1279,7 @@ async function doContact(e){
 
   function closeBooker(){
     overlay.classList.remove('show');
+    window.reboundUnlockScroll();
     setTimeout(function(){ overlay.classList.remove('open'); if(modalEl) modalEl.classList.remove('wide'); }, 250);
   }
 
