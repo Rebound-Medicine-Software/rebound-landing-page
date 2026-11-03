@@ -31,26 +31,30 @@
        Red:  #CC272A  |  Blue: #5185C6
        ============================================= */
     :root {
-      /* 2026-11-03, Josh's ask: "slightly warmer website" -- shifted the
-         whole dark background/border/muted-text scale toward a richer,
-         more chocolate-brown undertone (was closer to neutral near-black),
-         and warmed the muted greys so body copy doesn't read cold next to
-         it. Brand red/blue left as the exact hex from the logo (comment
-         below) so nothing drifts off-brand -- the warmth comes from
-         everything AROUND those two colours, which is most of the page. */
-      --bg:      #130f0b;
-      --bg-s:    #1a1511;
-      --bg-c:    #241d16;
+      /* 2026-11-03, Josh's ask: "slightly warmer website" -- first pass
+         (bg #130f0b) was too close to the original near-black to actually
+         read as different, so this is a much bigger, deliberately obvious
+         jump: a genuine dark coffee-brown background instead of near-black,
+         with borders/muted-text pushed the same direction so nothing looks
+         mismatched next to it. Brand red/blue left as the exact hex from
+         the logo (comment below) so nothing drifts off-brand -- the warmth
+         comes from everything AROUND those two colours, which is most of
+         the page. Also toned the hero's cool blue corner-glow down and the
+         warm red one up a touch (search .hero::before/.hero::after) so the
+         very first thing you see on load leans warm too. */
+      --bg:      #1F150C;
+      --bg-s:    #291C10;
+      --bg-c:    #332314;
       --red:     #CC272A;
       --red-b:   #E03033;
       --red-d:   rgba(204,39,42,0.10);
       --blue:    #5185C6;
       --blue-d:  rgba(81,133,198,0.10);
-      --text:    #F3EEE3;
-      --t2:      #8C7E6C;
-      --t3:      #584D3D;
-      --bd:      #2B2219;
-      --bd2:     #392E20;
+      --text:    #FBF1E0;
+      --t2:      #AD9775;
+      --t3:      #70593A;
+      --bd:      #4A3420;
+      --bd2:     #5C4226;
     }
     *{margin:0;padding:0;box-sizing:border-box}
     html{scroll-behavior:smooth}
@@ -111,8 +115,8 @@
     .hero{min-height:100vh;padding:100px 5% 80px;display:flex;align-items:center;position:relative;overflow:hidden}
     /* Soft-edged via extra gradient stops rather than filter:blur() — blur on an element
        this large is expensive to rasterize; a graduated gradient looks the same and is free. */
-    .hero::before{content:'';position:absolute;top:-25%;right:-15%;width:65vw;height:65vw;background:radial-gradient(circle,rgba(204,39,42,.13),rgba(204,39,42,.04) 45%,transparent 70%);pointer-events:none;z-index:0}
-    .hero::after{content:'';position:absolute;bottom:-30%;left:-15%;width:55vw;height:55vw;background:radial-gradient(circle,rgba(81,133,198,.10),rgba(81,133,198,.03) 45%,transparent 70%);pointer-events:none;z-index:0}
+    .hero::before{content:'';position:absolute;top:-25%;right:-15%;width:65vw;height:65vw;background:radial-gradient(circle,rgba(204,39,42,.19),rgba(204,39,42,.05) 45%,transparent 70%);pointer-events:none;z-index:0}
+    .hero::after{content:'';position:absolute;bottom:-30%;left:-15%;width:55vw;height:55vw;background:radial-gradient(circle,rgba(81,133,198,.06),rgba(81,133,198,.02) 45%,transparent 70%);pointer-events:none;z-index:0}
     .hero-r{position:absolute;right:-5%;top:50%;transform:translateY(-50%);font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:clamp(300px,44vw,600px);line-height:1;color:transparent;-webkit-text-stroke:1px rgba(204,39,42,.09);pointer-events:none;user-select:none;letter-spacing:-.04em;z-index:0}
     .hcont{position:relative;z-index:1;max-width:760px}
     .ey{font-size:12px;font-weight:500;letter-spacing:.20em;text-transform:uppercase;color:var(--t2);margin-bottom:28px;display:flex;align-items:center;gap:12px}
@@ -262,7 +266,8 @@
     .tm-bio-wrap{max-height:54px;overflow:hidden;position:relative;transition:max-height .45s ease;-webkit-mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);mask-image:linear-gradient(to bottom,#000 65%,transparent 100%)}
     .tm--expanded .tm-bio-wrap{max-height:1000px;-webkit-mask-image:none;mask-image:none}
     .tm-bio{font-size:12px;color:var(--t2);line-height:1.65;text-align:left}
-    .tm-experience{font-size:12px;color:var(--t3);line-height:1.65;text-align:left;font-style:italic;margin-top:6px}
+    .tm-exp-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:10px;margin-bottom:2px;text-align:left}
+    .tm-experience{color:var(--t3)}
     .tm-expand-hint{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red)}
     .tm-expand-hint svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
     .tm--expanded .tm-expand-hint svg{transform:rotate(180deg)}
@@ -1022,7 +1027,7 @@ async function doContact(e){
             <div class="tm-name">${escapeHtmlT(p.name)}</div>
             ${p.title?`<div class="tm-title">${escapeHtmlT(p.title)}</div>`:''}
             ${p.qualifications?`<div class="tm-qualifications">${escapeHtmlT(p.qualifications)}</div>`:''}
-            ${(hasBio||hasExperience)?`<div class="tm-bio-wrap">${hasBio?window.reboundBioParagraphs(p.bio).map(para=>`<p class="tm-bio">${escapeHtmlT(para)}</p>`).join(''):''}${hasExperience?`<p class="tm-experience">${escapeHtmlT(p.experience)}</p>`:''}</div>
+            ${(hasBio||hasExperience)?`<div class="tm-bio-wrap">${hasBio?window.reboundBioParagraphs(p.bio).map(para=>`<p class="tm-bio">${escapeHtmlT(para)}</p>`).join(''):''}${hasExperience?`${hasBio?'<p class="tm-exp-label">Experience</p>':''}${window.reboundBioParagraphs(p.experience).map(para=>`<p class="tm-bio tm-experience">${escapeHtmlT(para)}</p>`).join('')}`:''}</div>
             <div class="tm-expand-hint"><span>Read bio</span><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></div>`:''}
           </div>
         `;
