@@ -496,6 +496,8 @@
     .book-pay-method-option:has(input:checked){border-color:var(--red)}
     .book-pay-method-option input{margin:0}
     .book-pay-in-person-note{background:var(--bg-s);border:1px solid var(--bd2);border-radius:4px;padding:12px 14px;font-size:13px;color:var(--t2)}
+    .book-consent-check{display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:13px;color:var(--text);cursor:pointer}
+    .book-consent-check input{margin-top:2px;flex-shrink:0}
     .book-confirm-submit{background:var(--red);color:#fff;border:none;border-radius:4px;padding:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:14px;cursor:pointer;transition:opacity .2s}
     .book-confirm-submit:disabled{opacity:.5;cursor:default}
     .book-confirm-error{color:#B04B4B;font-size:12px;margin-top:-6px}
@@ -1679,9 +1681,25 @@ async function doContact(e){
         '<div class="book-pay-in-person-note" id="bookPayInPersonNote" style="display:none">You' + "'" + 'll pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' by card or cash when you arrive for your session.</div>' +
         // 2026-11-03, Josh's ask: make the cancellation/reschedule fee
         // policy clear before the patient confirms, not just something they
-        // discover after the fact. Shown for priced services only -- a free
-        // service has no fee to base a percentage on.
-        '<div class="book-pay-in-person-note">Cancellations made less than 24 hours before your session incur a 50% fee. Reschedules made less than 6 hours before your session incur a 25% fee.</div>'
+        // discover after the fact -- AND make them actively tick a box to
+        // agree to it ("so it'll hold up"), not just read text that scrolls
+        // past. Shown for priced services only -- a free service has no fee
+        // to base a percentage on. The checkbox's `required` attribute is
+        // the actual enforcement (native browser validation, same as every
+        // other required field on this form); public-booking/index.ts also
+        // re-checks this server-side since client-side `required` is only
+        // ever a UX nicety, never the real guard.
+        '<div class="book-pay-in-person-note">Cancellations made less than 24 hours before your session incur a 50% fee. Reschedules made less than 6 hours before your session incur a 25% fee.' +
+          '<label class="book-consent-check"><input type="checkbox" id="bcFeePolicyConsent" required /> I have read and agree to this cancellation/reschedule fee policy.</label>' +
+        '</div>' +
+        // Second, separate tickbox Josh asked for specifically on the "pay
+        // in person" path (no card on file there to auto-charge a fee
+        // against, so this is the clearest record that patient still agreed
+        // to it) -- shown/required only while "Pay in person" is selected,
+        // toggled by updatePayUI below alongside bookPayInPersonNote.
+        '<div class="book-pay-in-person-note" id="bookPayInPersonConsentWrap" style="display:none">' +
+          '<label class="book-consent-check"><input type="checkbox" id="bcPayInPersonFeeConsent" /> I understand that paying in person doesn' + "'" + 't exempt me from the cancellation/reschedule fee policy above, and I may be sent a payment request for it if it applies.</label>' +
+        '</div>'
       : '') +
       '<div class="book-confirm-error" id="bookConfirmError" style="display:none"></div>' +
       '<button type="submit" class="book-confirm-submit" id="bookConfirmSubmit">' +
@@ -1721,16 +1739,22 @@ async function doContact(e){
       var payRadios = form.querySelectorAll('input[name="bcPayMethod"]');
       var onlineWrap = document.getElementById('bookPayOnlineWrap');
       var inPersonNote = document.getElementById('bookPayInPersonNote');
+      var inPersonConsentWrap = document.getElementById('bookPayInPersonConsentWrap');
+      var inPersonConsentBox = document.getElementById('bcPayInPersonFeeConsent');
       var updatePayUI = function(){
         var val = form.querySelector('input[name="bcPayMethod"]:checked').value;
         var btn = document.getElementById('bookConfirmSubmit');
         if(val === 'online'){
           onlineWrap.style.display = '';
           inPersonNote.style.display = 'none';
+          inPersonConsentWrap.style.display = 'none';
+          inPersonConsentBox.required = false;
           btn.textContent = 'Pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' & confirm';
         } else {
           onlineWrap.style.display = 'none';
           inPersonNote.style.display = '';
+          inPersonConsentWrap.style.display = '';
+          inPersonConsentBox.required = true;
           btn.textContent = 'Confirm booking (pay in person)';
         }
       };
@@ -1782,7 +1806,9 @@ async function doContact(e){
           notes: notesVal,
           consent: consentVal,
           paymentIntentId: paymentIntentId,
-          paymentMethod: payMethod
+          paymentMethod: payMethod,
+          feePolicyConsent: priced ? document.getElementById('bcFeePolicyConsent').checked : undefined,
+          payInPersonFeeConsent: payMethod === 'in_person' ? document.getElementById('bcPayInPersonFeeConsent').checked : undefined
         });
       }
 
