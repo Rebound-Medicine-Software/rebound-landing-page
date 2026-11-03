@@ -266,6 +266,7 @@
     .tm-bio-wrap{max-height:54px;overflow:hidden;position:relative;transition:max-height .45s ease;-webkit-mask-image:linear-gradient(to bottom,#000 65%,transparent 100%);mask-image:linear-gradient(to bottom,#000 65%,transparent 100%)}
     .tm--expanded .tm-bio-wrap{max-height:1000px;-webkit-mask-image:none;mask-image:none}
     .tm-bio{font-size:12px;color:var(--t2);line-height:1.65;text-align:left}
+    .tm-bio:not(:last-child){margin-bottom:10px}
     .tm-exp-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:10px;margin-bottom:2px;text-align:left}
     .tm-experience{color:var(--t3)}
     .tm-expand-hint{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--red)}
@@ -481,15 +482,20 @@
     .date-panel{max-height:0;overflow:hidden;transition:max-height .3s ease}
     .date-item--open .date-panel{max-height:400px}
     .date-panel-inner{padding:0 14px 14px}
-    .prac-pick-card{border:1px solid var(--bd);border-radius:4px;padding:16px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s;display:flex;gap:14px;align-items:center;text-align:left}
-    .prac-pick-card:hover{border-color:var(--red);background:var(--bg-c)}
-    .prac-pick-photo,.prac-pick-photo-fallback{width:52px;height:52px;border-radius:50%;flex-shrink:0}
-    .prac-pick-photo{object-fit:cover;border:1px solid var(--bd2)}
-    .prac-pick-photo-fallback{display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:#fff}
+    /* Redesigned 2026-11-03, Josh's ask: "a Select practitioner image screen,
+       so users can actually get a good look at the practitioners" -- the old
+       card was a tiny 52px circle thumbnail in a thin row. Photo is now the
+       whole top of the card, portrait-cropped, same width as the card. */
+    .prac-pick-grid{display:flex;flex-wrap:wrap;gap:16px}
+    .prac-pick-card{border:1px solid var(--bd);border-radius:8px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s,transform .2s;display:flex;flex-direction:column;text-align:left;overflow:hidden;flex:1 1 150px;max-width:210px;padding:0}
+    .prac-pick-card:hover{border-color:var(--red);background:var(--bg-c);transform:translateY(-3px)}
+    .prac-pick-photo,.prac-pick-photo-fallback{width:100%;aspect-ratio:4/5;flex-shrink:0;display:block}
+    .prac-pick-photo{object-fit:cover;object-position:top center}
+    .prac-pick-photo-fallback{display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:42px;color:#fff}
+    .prac-pick-info{padding:12px 14px 14px}
     .prac-pick-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.02em;color:var(--text)}
-    .prac-pick-title{font-size:13px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.03em;margin-top:3px}
-    .prac-pick-qualifications{font-size:11.5px;font-weight:600;color:var(--t2);margin-top:2px}
-    .prac-pick-bio{font-size:11px;color:var(--t2);margin-top:3px;line-height:1.5}
+    .prac-pick-title{font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.03em;margin-top:4px;line-height:1.4}
+    .prac-pick-qualifications{font-size:11px;font-weight:600;color:var(--t2);margin-top:3px;line-height:1.4}
     .book-confirm-note{font-size:12px;color:var(--t2);line-height:1.6;text-align:center;padding:4px 10px 14px}
     /* Our own one-screen Confirm form (2026-11-01) -- replaces Cal.com's
        embedded booking widget so the patient isn't re-picking the date/time
@@ -1580,6 +1586,9 @@ async function doContact(e){
       ? "More than one of us is free then — pick who you'd like."
       : "One last step to confirm — you won't leave this page.";
     body.appendChild(note);
+    var grid = document.createElement('div');
+    grid.className = 'prac-pick-grid';
+    body.appendChild(grid);
     state.selectedSlot.practitioners.forEach(function(p){
       var card = document.createElement('button');
       card.type = 'button';
@@ -1587,7 +1596,7 @@ async function doContact(e){
       var photo = p.photoUrl
         ? '<img class="prac-pick-photo" src="' + p.photoUrl + '" alt="" />'
         : '<div class="prac-pick-photo-fallback" style="background:' + (p.colourHex || '#CC272A') + '">' + escapeHtml((p.name || '?').charAt(0)) + '</div>';
-      var html = photo + '<div><div class="prac-pick-name">' + escapeHtml(p.name) + '</div>';
+      var html = photo + '<div class="prac-pick-info"><div class="prac-pick-name">' + escapeHtml(p.name) + '</div>';
       if(p.title) html += '<div class="prac-pick-title">' + escapeHtml(p.title) + '</div>';
       if(p.qualifications) html += '<div class="prac-pick-qualifications">' + escapeHtml(p.qualifications) + '</div>';
       // Bio deliberately left out here (Josh, 2026-11-02): "You don't need
@@ -1597,7 +1606,7 @@ async function doContact(e){
       html += '</div>';
       card.innerHTML = html;
       card.addEventListener('click', function(){ confirmBooking(p); });
-      body.appendChild(card);
+      grid.appendChild(card);
     });
   }
 
