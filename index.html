@@ -1676,7 +1676,12 @@ async function doContact(e){
           '<label class="book-pay-method-option"><input type="radio" name="bcPayMethod" value="in_person" /> Pay in person (card or cash)</label>' +
         '</div></div>' +
         '<div class="book-field" id="bookPayOnlineWrap"><label>Card details</label><div class="book-pay-element" id="bookPayElement"><div class="book-loading" style="padding:4px 0;font-size:13px">Loading payment form…</div></div></div>' +
-        '<div class="book-pay-in-person-note" id="bookPayInPersonNote" style="display:none">You' + "'" + 'll pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' by card or cash when you arrive for your session.</div>'
+        '<div class="book-pay-in-person-note" id="bookPayInPersonNote" style="display:none">You' + "'" + 'll pay ' + formatPrice(state.selectedService.priceCents, state.selectedService.currency) + ' by card or cash when you arrive for your session.</div>' +
+        // 2026-11-03, Josh's ask: make the cancellation/reschedule fee
+        // policy clear before the patient confirms, not just something they
+        // discover after the fact. Shown for priced services only -- a free
+        // service has no fee to base a percentage on.
+        '<div class="book-pay-in-person-note">Cancellations made less than 24 hours before your session incur a 50% fee. Reschedules made less than 6 hours before your session incur a 25% fee.</div>'
       : '') +
       '<div class="book-confirm-error" id="bookConfirmError" style="display:none"></div>' +
       '<button type="submit" class="book-confirm-submit" id="bookConfirmSubmit">' +
