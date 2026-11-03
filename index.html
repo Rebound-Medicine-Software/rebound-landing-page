@@ -136,7 +136,7 @@
 
     /* ── ABOUT ── */
     .about{background:var(--bg-s);padding:110px 5%;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
-    .ag{display:grid;grid-template-columns:320px 1fr;gap:72px;align-items:start}
+    .ag{display:grid;grid-template-columns:1fr;gap:72px;align-items:start;max-width:720px}
     .photo-card{background:linear-gradient(160deg,var(--bg-c),#141210);border:1px solid var(--bd2);border-radius:4px;padding:24px 24px 0;overflow:hidden;position:relative;box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
     .photo-card::before{content:'';position:absolute;top:-20%;right:-30%;width:70%;height:60%;background:radial-gradient(circle,rgba(204,39,42,.14),transparent 70%);pointer-events:none}
     .photo-card img{display:block;width:100%;height:auto;object-fit:cover;border-radius:2px}
@@ -558,16 +558,11 @@
     </div>
 
     <p class="hero-desc reveal" style="--rd:1">
-      Biomechanics assessment, strength training, and sports therapy, all working together for athletes who compete.
+      Injury assessment, strength training, and pain management, all working together for athletes who compete.
     </p>
     <div class="ctas reveal" style="--rd:2">
       <a href="#contact" class="bp" data-book-trigger="1">Book a Session<svg class="arw" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       <a href="#ecosystem" class="bs">What We Do</a>
-    </div>
-    <div class="stats reveal" style="--rd:3">
-      <div><div class="sn">BSc<i>.</i></div><div class="sl">Sports Therapy (Hons)</div></div>
-      <div><div class="sn">MSc<i>.</i></div><div class="sl">Strength &amp; Conditioning</div></div>
-      <div><div class="sn">4<i>+</i></div><div class="sl">Years in Practice</div></div>
     </div>
   </div>
   <div class="scroll-cue" aria-hidden="true">Scroll<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
@@ -575,7 +570,7 @@
 
 <!-- ══ MEASURE / TRAIN / REBOUND bar ═══════════ -->
 <div class="mtr-bar reveal" style="--rd:0" aria-hidden="true">
-  <div class="mtr-item" style="color:var(--blue)"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>MEASURE<span class="mtr-sub">Biomechanics · Force Plates · Data</span></div>
+  <div class="mtr-item" style="color:var(--blue)"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>MEASURE<span class="mtr-sub">Movement Analysis · Force Plates · Data</span></div>
   <div class="mtr-item" style="color:var(--text)"><svg viewBox="0 0 24 24"><rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><rect x="6" y="7" width="2" height="10" rx="1"/><rect x="16" y="7" width="2" height="10" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/></svg>TRAIN<span class="mtr-sub">S&amp;C · Programming · Performance</span></div>
   <div class="mtr-item" style="color:var(--red)"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>REBOUND<span class="mtr-sub">Therapy · Rehab · Return to Sport</span></div>
 </div>
@@ -583,21 +578,11 @@
 <!-- ══ ABOUT ══════════════════════════════════════ -->
 <section class="about" id="about">
   <div class="ag">
-    <div class="reveal" style="--rd:0">
-      <div class="photo-card">
-        <img src="josh-photo.png" alt="Josh, founder of Rebound Medicine and Performance" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-        <div class="photo-placeholder">
-          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>Add your photo</span>
-        </div>
-      </div>
-    </div>
     <div class="reveal" style="--rd:1">
       <div class="ey2">Our Founder</div>
       <div class="an">Joshua<br>Richards-Fisher</div>
       <div class="ar">Graduate Sports Therapist · S&amp;C Coach · Amateur MMA Athlete</div>
-      <p class="ab">Rebound exists at the intersection of clinical sports therapy and athletic performance, helping people recover from injury, build physical resilience, and compete at their best. It's led by Joshua Richards-Fisher, whose background spans hands-on clinical work, S&amp;C programming, and sports technology, with a focus on force plate biomechanics and performance data.</p>
-      <p class="ab">I've been competing in MMA at the –70kg amateur level since 2020. That experience shapes everything I do: I know what it takes to train hard, manage your body through a camp, and perform when it matters. That's what I bring to every client relationship.</p>
+      <p class="ab">Rebound exists at the intersection of clinical injury care and athletic performance, helping people recover from injury, build physical resilience, and compete at their best. It's led by Joshua Richards-Fisher, whose background spans hands-on clinical work, S&amp;C programming, and sports technology, with a focus on force plate testing and performance data.</p>
       <div class="creds">
         <div class="cred">
           <div class="cri"><svg viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/></svg></div>
@@ -609,7 +594,7 @@
         </div>
         <div class="cred">
           <div class="cri"><svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div>
-          <div><div class="ct">Force Plate Specialist</div><div class="cs">Biomechanics &amp; data analysis</div></div>
+          <div><div class="ct">Force Plate Specialist</div><div class="cs">Movement &amp; data analysis</div></div>
         </div>
       </div>
     </div>
@@ -627,16 +612,16 @@
       <div class="em"><img src="tile-icon-rebound.png" alt="" aria-hidden="true"></div>
       <div class="erl">Founder &amp; Director</div><span class="etg">Main Business</span>
       <div class="en">Rebound Medicine<br>&amp; Performance</div>
-      <p class="edc">My primary practice. Sports therapy, rehabilitation, and S&amp;C coaching for athletes and active individuals at every level, from acute injury management through to return-to-sport and long-term conditioning.</p>
-      <ul class="esv"><li>Sports Therapy</li><li>Injury Rehabilitation</li><li>S&amp;C Programming</li><li>Concussion Management</li><li>Return to Sport</li><li>Performance Assessments</li></ul>
+      <p class="edc">My primary practice. Injury assessment and diagnosis, pain management, rehabilitation, and S&amp;C coaching for athletes and active individuals at every level, from acute injury management through to return-to-sport and long-term conditioning.</p>
+      <ul class="esv"><li>Injury Assessment</li><li>Pain Management</li><li>Injury Rehabilitation</li><li>S&amp;C Programming</li><li>Concussion Management</li><li>Return to Sport</li><li>Performance Assessments</li></ul>
       <a href="#" class="evlink" data-book-trigger="1">Book a session →</a>
     </div>
     <div class="ec ev reveal" style="--rd:1">
       <div class="em"><img src="tile-icon-evolve.png" alt="" aria-hidden="true"></div>
       <div class="erl">Practitioner · Sub-contracting</div><span class="etg">Where I Also Practice</span>
       <div class="en">Evolve<br>Physiotherapy</div>
-      <p class="edc">I provide clinical sports therapy within Evolve Physiotherapy as a sub-contracting practitioner. Evolve is an independently run clinic, not my business, but it's another way to access my clinical work as part of a wider multidisciplinary team.</p>
-      <ul class="esv"><li>Clinical Sports Therapy</li><li>MDT Environment</li><li>Physio Clinic Access</li><li>Referral Pathways</li></ul>
+      <p class="edc">I provide clinical injury assessment, diagnosis, and treatment within Evolve Physiotherapy as a sub-contracting practitioner. Evolve is an independently run clinic, not my business, but it's another way to access my clinical work as part of a wider multidisciplinary team.</p>
+      <ul class="esv"><li>Clinical Injury Assessment</li><li>MDT Environment</li><li>Physio Clinic Access</li><li>Referral Pathways</li></ul>
       <a href="https://eubookings.nookal.com/bookings/appointment/NMEEC/QLTRJ?9865018f0d8974b4e2cbedf04d49fbe5=60a9b33fadaaac0080526df0a82d3b06" class="evlink" target="_blank" rel="noopener">See services booked with me →</a>
     </div>
     <div class="ec nx reveal" style="--rd:2">
@@ -651,8 +636,8 @@
       <div class="em"><img src="tile-icon-golf.png" alt="" aria-hidden="true"></div>
       <div class="erl">Founder</div><span class="etg">Specialist Service</span>
       <div class="en">Golf Movement<br>Lab</div>
-      <p class="edc">Biomechanics and force plate analysis built for golfers. Objective movement data identifies restrictions, asymmetries, and power leaks that limit your swing, which get addressed with targeted conditioning and technique work.</p>
-      <ul class="esv"><li>Force Plate Analysis</li><li>Swing Biomechanics</li><li>Movement Screening</li><li>Golf-specific Conditioning</li><li>Performance Tracking</li></ul>
+      <p class="edc">Movement and force plate analysis built for golfers. Objective movement data identifies restrictions, asymmetries, and power leaks that limit your swing, which get addressed with targeted conditioning and technique work.</p>
+      <ul class="esv"><li>Force Plate Analysis</li><li>Swing Mechanics</li><li>Movement Screening</li><li>Golf-specific Conditioning</li><li>Performance Tracking</li></ul>
     </div>
   </div>
 </section>
@@ -664,8 +649,8 @@
   <div class="sg">
     <div class="sv reveal" style="--rd:0">
       <div class="si"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
-      <div class="svt">Sports Therapy</div>
-      <p class="svd">Assessment, diagnosis, and treatment of sport and exercise-related injuries. Soft tissue therapy, joint mobilisation, taping, and rehab programming tailored to your sport.</p>
+      <div class="svt">Injury Assessment &amp; Diagnosis</div>
+      <p class="svd">Hands-on assessment, diagnosis, and pain management for sport and exercise-related injuries. Soft tissue therapy, joint mobilisation, taping, and rehab programming tailored to your sport.</p>
     </div>
     <div class="sv reveal" style="--rd:1">
       <div class="si"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
