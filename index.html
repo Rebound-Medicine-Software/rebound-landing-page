@@ -31,19 +31,26 @@
        Red:  #CC272A  |  Blue: #5185C6
        ============================================= */
     :root {
-      --bg:      #0a0908;
-      --bg-s:    #111110;
-      --bg-c:    #1a1816;
+      /* 2026-11-03, Josh's ask: "slightly warmer website" -- shifted the
+         whole dark background/border/muted-text scale toward a richer,
+         more chocolate-brown undertone (was closer to neutral near-black),
+         and warmed the muted greys so body copy doesn't read cold next to
+         it. Brand red/blue left as the exact hex from the logo (comment
+         below) so nothing drifts off-brand -- the warmth comes from
+         everything AROUND those two colours, which is most of the page. */
+      --bg:      #130f0b;
+      --bg-s:    #1a1511;
+      --bg-c:    #241d16;
       --red:     #CC272A;
       --red-b:   #E03033;
       --red-d:   rgba(204,39,42,0.10);
       --blue:    #5185C6;
       --blue-d:  rgba(81,133,198,0.10);
-      --text:    #F0EBE0;
-      --t2:      #787068;
-      --t3:      #46423C;
-      --bd:      #222018;
-      --bd2:     #2c2820;
+      --text:    #F3EEE3;
+      --t2:      #8C7E6C;
+      --t3:      #584D3D;
+      --bd:      #2B2219;
+      --bd2:     #392E20;
     }
     *{margin:0;padding:0;box-sizing:border-box}
     html{scroll-behavior:smooth}
