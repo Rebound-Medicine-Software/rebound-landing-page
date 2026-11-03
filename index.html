@@ -487,6 +487,30 @@
        card was a tiny 52px circle thumbnail in a thin row. Photo is now the
        whole top of the card, portrait-cropped, same width as the card. */
     .prac-pick-grid{display:flex;flex-wrap:wrap;gap:16px}
+    /* Month -> Week -> Day-times availability picker (task #219) */
+    .cal-wrap{display:flex;flex-direction:column;gap:10px}
+    .cal-nav{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 6px}
+    .cal-nav-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.03em;color:var(--text)}
+    .cal-nav-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--bd2);background:var(--bg-s);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .2s,background .2s;padding:0}
+    .cal-nav-btn:hover:not(:disabled){border-color:var(--red);background:var(--bg-c)}
+    .cal-nav-btn:disabled{opacity:.3;cursor:default}
+    .cal-nav-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .cal-grid-head{margin-bottom:2px}
+    .cal-wd{text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);padding:4px 0}
+    .cal-day{aspect-ratio:1;border-radius:6px;border:1px solid transparent;background:none;color:var(--t2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:default;font-family:'Barlow',sans-serif;font-size:13px;transition:border-color .2s,background .2s}
+    .cal-day--out{opacity:.25}
+    .cal-day--disabled{opacity:.3}
+    .cal-day--has{color:var(--text);border-color:var(--bd);background:var(--bg-s);cursor:pointer}
+    .cal-day--has:hover{border-color:var(--red);background:var(--bg-c)}
+    .cal-day-dot{width:4px;height:4px;border-radius:50%;background:var(--red)}
+    .cal-empty{color:var(--t2);font-size:13px;text-align:center;padding:30px 10px}
+    .week-back{align-self:flex-start;display:flex;align-items:center;gap:4px;background:none;border:none;color:var(--t2);font-size:12px;letter-spacing:.03em;cursor:pointer;padding:0 0 4px;font-family:'Barlow',sans-serif;transition:color .2s}
+    .week-back:hover{color:var(--text)}
+    .week-back svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .week-label{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.02em;color:var(--text);margin-bottom:4px}
+    .date-head--static{cursor:default}
+    .week-panel-inner{padding:0 0 14px}
     .prac-pick-card{border:1px solid var(--bd);border-radius:8px;background:var(--bg-s);cursor:pointer;transition:border-color .2s,background .2s,transform .2s;display:flex;flex-direction:column;text-align:left;overflow:hidden;flex:1 1 150px;max-width:210px;padding:0}
     .prac-pick-card:hover{border-color:var(--red);background:var(--bg-c);transform:translateY(-3px)}
     .prac-pick-photo,.prac-pick-photo-fallback{width:100%;aspect-ratio:4/5;flex-shrink:0;display:block}
@@ -1302,6 +1326,7 @@ async function doContact(e){
   function resetState(){
     state = {
       services: [], selectedService: null, slots: [], selectedSlot: null, selectedPractitioner: null,
+      calendarMonth: null, selectedWeekStart: null, monthCache: {},
       // Stripe bits live on state (not loose module vars) so a fresh
       // openBooker() -- which calls this -- always starts clean, rather than
       // a reopened booker accidentally reusing a Stripe Elements instance or
@@ -1464,80 +1489,232 @@ async function doContact(e){
     });
   }
 
+  // Month -> Week -> Day-times availability picker (task #219, 2026-11-03,
+  // Josh's ask). Replaces the old flat scrollable list of every open date --
+  // now a real calendar: pick a month (fetches + marks which days in that
+  // month have openings), click any marked day to drop into that week, and
+  // the week view lists every day in it with its times already underneath
+  // (no further per-day collapse -- that's the "listed underneath" Josh
+  // asked for). get_availability already supported startDate/endDate, just
+  // unused by the old 14-day-flat-list caller -- this is the first thing to
+  // actually pass a month-scoped range, with slots cached per month so
+  // flipping back to an already-seen month doesn't re-fetch.
+  var WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var CAL_MAX_MONTHS_AHEAD = 3; // sane cap so Next doesn't let someone click into the void
+
+  function startOfWeekMon(d){
+    var copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var day = copy.getDay(); // 0 = Sun .. 6 = Sat
+    copy.setDate(copy.getDate() + (day === 0 ? -6 : 1 - day));
+    return copy;
+  }
+
+  function dayKey(d){ return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+
+  function slotsByDay(slots){
+    var map = {};
+    slots.forEach(function(slot){
+      var k = dayKey(new Date(slot.start));
+      (map[k] = map[k] || []).push(slot);
+    });
+    return map;
+  }
+
+  async function loadMonthAvailability(monthDate){
+    var key = monthDate.getFullYear() + '-' + monthDate.getMonth();
+    if(state.monthCache[key]){
+      state.slots = state.monthCache[key];
+      return;
+    }
+    var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Europe/London';
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    var rangeStart = monthStart > today ? monthStart : today;
+    var rangeEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
+    var result = await callPublicBooking('get_availability', {
+      serviceId: state.selectedService.id, timeZone: tz,
+      startDate: rangeStart.toISOString(), endDate: rangeEnd.toISOString()
+    });
+    var slots = result.slots || [];
+    state.monthCache[key] = slots;
+    state.slots = slots;
+  }
+
   async function loadAvailability(){
     setStep('availability');
     headTitle.textContent = state.selectedService.name;
-    headSub.textContent = 'Pick a time';
+    headSub.textContent = 'Pick a date';
     showLoading('Checking availability…');
+    state.monthCache = {};
+    var now = new Date();
+    state.calendarMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    state.selectedWeekStart = null;
     try {
-      var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Europe/London';
-      var result = await callPublicBooking('get_availability', { serviceId: state.selectedService.id, timeZone: tz });
-      state.slots = result.slots || [];
-      renderAvailability();
+      await loadMonthAvailability(state.calendarMonth);
+      renderMonthView();
     } catch(err){
       console.error('booker: get_availability failed', err);
       showError("Couldn't load availability right now — check your connection and try again.", loadAvailability);
     }
   }
 
-  // Date-first picker (task #199): pick a date, then its times open
-  // underneath like an accordion -- instead of every date's times all
-  // showing on screen together. headSub updates to "Pick a time" once a
-  // date is open, same copy as before this changed.
-  function renderAvailability(){
+  async function navigateMonth(delta){
+    var m = state.calendarMonth;
+    state.calendarMonth = new Date(m.getFullYear(), m.getMonth() + delta, 1);
+    showLoading('Checking availability…');
+    try {
+      await loadMonthAvailability(state.calendarMonth);
+      renderMonthView();
+    } catch(err){
+      console.error('booker: get_availability failed', err);
+      showError("Couldn't load availability right now — check your connection and try again.", renderMonthView);
+    }
+  }
+
+  function renderMonthView(){
     setStep('availability');
     headTitle.textContent = state.selectedService.name;
     headSub.textContent = 'Pick a date';
     body.innerHTML = '';
-    if(!state.slots.length){
-      body.innerHTML = '<div class="book-empty">No open times in the next couple of weeks — email us and we\'ll find something that works.</div>';
-      return;
-    }
-    var byDay = [];
-    var byDayIndex = {};
-    state.slots.forEach(function(slot){
-      var d = new Date(slot.start);
-      var dayKey = d.toDateString();
-      if(!(dayKey in byDayIndex)){
-        byDayIndex[dayKey] = byDay.length;
-        byDay.push({ date: d, slots: [] });
-      }
-      byDay[byDayIndex[dayKey]].slots.push(slot);
+
+    var monthDate = state.calendarMonth;
+    var dayMap = slotsByDay(state.slots);
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    var monthsAhead = (monthDate.getFullYear() - thisMonthStart.getFullYear()) * 12 + (monthDate.getMonth() - thisMonthStart.getMonth());
+
+    var wrap = document.createElement('div');
+    wrap.className = 'cal-wrap';
+
+    var nav = document.createElement('div');
+    nav.className = 'cal-nav';
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button'; prevBtn.className = 'cal-nav-btn'; prevBtn.setAttribute('aria-label', 'Previous month');
+    prevBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+    prevBtn.disabled = monthsAhead <= 0;
+    prevBtn.addEventListener('click', function(){ navigateMonth(-1); });
+
+    var label = document.createElement('div');
+    label.className = 'cal-nav-label';
+    label.textContent = monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button'; nextBtn.className = 'cal-nav-btn'; nextBtn.setAttribute('aria-label', 'Next month');
+    nextBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    nextBtn.disabled = monthsAhead >= CAL_MAX_MONTHS_AHEAD;
+    nextBtn.addEventListener('click', function(){ navigateMonth(1); });
+
+    nav.appendChild(prevBtn); nav.appendChild(label); nav.appendChild(nextBtn);
+    wrap.appendChild(nav);
+
+    var headRow = document.createElement('div');
+    headRow.className = 'cal-grid cal-grid-head';
+    WEEKDAY_LABELS.forEach(function(w){
+      var c = document.createElement('div'); c.className = 'cal-wd'; c.textContent = w; headRow.appendChild(c);
     });
+    wrap.appendChild(headRow);
+
+    var grid = document.createElement('div');
+    grid.className = 'cal-grid';
+    var firstOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    var gridStart = startOfWeekMon(firstOfMonth);
+    var anyAvailable = false;
+    for(var i = 0; i < 42; i++){
+      (function(i){
+        var cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+        var inMonth = cellDate.getMonth() === monthDate.getMonth();
+        var daySlots = dayMap[dayKey(cellDate)] || [];
+        var isPast = cellDate < today;
+        var clickable = inMonth && daySlots.length > 0 && !isPast;
+        var cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'cal-day' + (inMonth ? '' : ' cal-day--out') + (clickable ? ' cal-day--has' : ' cal-day--disabled');
+        cell.disabled = !clickable;
+        cell.innerHTML = '<span class="cal-day-num">' + cellDate.getDate() + '</span>' + (clickable ? '<span class="cal-day-dot"></span>' : '');
+        if(clickable){
+          anyAvailable = true;
+          cell.addEventListener('click', function(){
+            state.selectedWeekStart = startOfWeekMon(cellDate);
+            renderWeekView();
+          });
+        }
+        grid.appendChild(cell);
+      })(i);
+    }
+    wrap.appendChild(grid);
+
+    if(!anyAvailable){
+      var empty = document.createElement('div');
+      empty.className = 'cal-empty';
+      empty.textContent = 'No open times this month' + (monthsAhead < CAL_MAX_MONTHS_AHEAD ? ' — try the next one.' : '.');
+      wrap.appendChild(empty);
+    }
+
+    body.appendChild(wrap);
+  }
+
+  function renderWeekView(){
+    setStep('availability');
+    headTitle.textContent = state.selectedService.name;
+    headSub.textContent = 'Pick a time';
+    body.innerHTML = '';
+
+    var weekStart = state.selectedWeekStart;
+    var dayMap = slotsByDay(state.slots);
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+
+    var backLink = document.createElement('button');
+    backLink.type = 'button';
+    backLink.className = 'week-back';
+    backLink.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg> Calendar';
+    backLink.addEventListener('click', function(){
+      state.selectedWeekStart = null;
+      renderMonthView();
+    });
+    body.appendChild(backLink);
+
+    var weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+    var weekLabel = document.createElement('div');
+    weekLabel.className = 'week-label';
+    weekLabel.textContent = 'Week of ' + weekStart.toLocaleDateString(undefined, { day: 'numeric', month: 'long' }) +
+      ' – ' + weekEnd.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+    body.appendChild(weekLabel);
 
     var list = document.createElement('div');
     list.className = 'date-list';
+    var any = false;
+    for(var i = 0; i < 7; i++){
+      var d = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i);
+      if(d < today) continue;
+      var daySlots = (dayMap[dayKey(d)] || []).slice().sort(function(a, b){ return new Date(a.start) - new Date(b.start); });
+      if(!daySlots.length) continue;
+      any = true;
 
-    byDay.forEach(function(day, idx){
       var item = document.createElement('div');
-      item.className = 'date-item';
+      item.className = 'date-item date-item--open';
 
-      var head = document.createElement('button');
-      head.type = 'button';
-      head.className = 'date-head';
-      var weekday = day.date.toLocaleDateString(undefined, { weekday: 'short' });
-      var dayNum = day.date.getDate();
-      var month = day.date.toLocaleDateString(undefined, { month: 'short' });
-      var fullDate = day.date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+      var head = document.createElement('div');
+      head.className = 'date-head date-head--static';
+      var weekday = d.toLocaleDateString(undefined, { weekday: 'short' });
+      var dayNum = d.getDate();
+      var month = d.toLocaleDateString(undefined, { month: 'short' });
+      var fullDate = d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
       head.innerHTML =
         '<div class="date-head-chip"><span class="date-head-weekday">' + escapeHtml(weekday) + '</span>' +
         '<span class="date-head-num">' + dayNum + '</span><span class="date-head-month">' + escapeHtml(month) + '</span></div>' +
         '<div class="date-head-info"><div class="date-head-full">' + escapeHtml(fullDate) + '</div>' +
-        '<div class="date-head-count">' + day.slots.length + ' time' + (day.slots.length === 1 ? '' : 's') + ' available</div></div>' +
-        '<svg class="date-head-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+        '<div class="date-head-count">' + daySlots.length + ' time' + (daySlots.length === 1 ? '' : 's') + ' available</div></div>';
 
       var panel = document.createElement('div');
-      panel.className = 'date-panel';
-      var inner = document.createElement('div');
-      inner.className = 'date-panel-inner';
+      panel.className = 'date-panel-inner week-panel-inner';
       var row = document.createElement('div');
       row.className = 'time-row';
-      day.slots.forEach(function(slot){
-        var d = new Date(slot.start);
+      daySlots.forEach(function(slot){
+        var sd = new Date(slot.start);
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'time-pill';
-        var timeStr = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        var timeStr = sd.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
         var html = escapeHtml(timeStr);
         if(slot.practitioners.length > 1) html += '<span class="badge">' + slot.practitioners.length + '</span>';
         btn.innerHTML = html;
@@ -1547,28 +1724,19 @@ async function doContact(e){
         });
         row.appendChild(btn);
       });
-      inner.appendChild(row);
-      panel.appendChild(inner);
-
-      head.addEventListener('click', function(){
-        var wasOpen = item.classList.contains('date-item--open');
-        list.querySelectorAll('.date-item--open').forEach(function(el){ el.classList.remove('date-item--open'); });
-        if(!wasOpen){
-          item.classList.add('date-item--open');
-          headSub.textContent = 'Pick a time';
-        } else {
-          headSub.textContent = 'Pick a date';
-        }
-      });
+      panel.appendChild(row);
 
       item.appendChild(head);
       item.appendChild(panel);
       list.appendChild(item);
-      if(idx === 0){
-        item.classList.add('date-item--open');
-        headSub.textContent = 'Pick a time';
-      }
-    });
+    }
+
+    if(!any){
+      var empty = document.createElement('div');
+      empty.className = 'book-empty';
+      empty.textContent = 'No open times this week.';
+      list.appendChild(empty);
+    }
 
     body.appendChild(list);
   }
@@ -1869,7 +2037,10 @@ async function doContact(e){
     if(pills.confirm.classList.contains('active')){
       renderPractitionerStep();
     } else if(pills.practitioner.classList.contains('active')){
-      renderAvailability();
+      renderWeekView();
+    } else if(pills.availability.classList.contains('active') && state.selectedWeekStart){
+      state.selectedWeekStart = null;
+      renderMonthView();
     } else {
       loadServices();
     }
