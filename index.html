@@ -1426,12 +1426,27 @@ async function doContact(e){
     showLoading('Loading services…');
     try {
       var result = await callPublicBooking('list_services', {});
+      // 2026-11-04, Josh's ask: a kill switch for online booking while he
+      // sorts out Stripe, without taking the rest of the site down. Driven
+      // entirely by the backend's BOOKING_PAUSED secret -- this is just
+      // showing what the server already enforces, not a client-side-only
+      // gate (public-booking refuses create_booking/create_payment_intent
+      // itself regardless of what this page does).
+      if(result.bookingPaused){
+        renderBookingPaused();
+        return;
+      }
       state.services = result.services || [];
       renderServices();
     } catch(err){
       console.error('booker: list_services failed', err);
       showError("Couldn't load services right now — check your connection and try again.", loadServices);
     }
+  }
+
+  function renderBookingPaused(){
+    headSub.textContent = '';
+    body.innerHTML = '<div class="book-empty">Online booking is temporarily paused — please call or email us to book a session.</div>';
   }
 
   function renderServices(){
