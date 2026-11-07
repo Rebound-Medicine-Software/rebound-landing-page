@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — Rebound Medicine & Performance</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #1F150C;
+    --bg-s:    #291C10;
+    --bg-c:    #332314;
+    --red:     #CC272A;
+    --red-b:   #E03033;
+    --red-d:   rgba(204,39,42,0.10);
+    --text:    #FBF1E0;
+    --t2:      #AD9775;
+    --t3:      #70593A;
+    --bd:      #4A3420;
+    --bd2:     #5C4226;
+    --ok:      #8FAE9B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:16px;line-height:1.6;min-height:100vh}
+  a{color:var(--red)}
+  h1,h2,h3{font-family:'Barlow Condensed',sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.01em}
+
+  nav{height:66px;padding:0 5%;display:flex;align-items:center;justify-content:space-between;gap:24px;background:rgba(10,9,8,.97);border-bottom:1px solid var(--bd)}
+  .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .nav-logo img{height:40px;width:40px;object-fit:contain}
+  .nav-logo span{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:17px;letter-spacing:.04em;text-transform:uppercase;color:var(--text)}
+  .nav-back{color:var(--t2);text-decoration:none;font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+  .nav-back:hover{color:var(--text)}
+
+  main{max-width:720px;margin:0 auto;padding:60px 24px 100px}
+
+  .card{background:var(--bg-s);border:1px solid var(--bd);border-radius:6px;padding:36px}
+  .card + .card{margin-top:20px}
+
+  h1{font-size:clamp(32px,5vw,44px);margin-bottom:10px}
+  .lede{color:var(--t2);margin-bottom:28px;font-size:15px}
+
+  label{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+  input[type=email]{width:100%;background:var(--bg-c);border:1px solid var(--bd2);color:var(--text);padding:13px 14px;border-radius:4px;font-size:15px;font-family:inherit}
+  input[type=email]:focus{outline:none;border-color:var(--red)}
+
+  .btn{background:var(--red);color:#fff;border:none;padding:13px 26px;border-radius:4px;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background .2s;margin-top:16px;width:100%}
+  .btn:hover{background:var(--red-b)}
+  .btn:disabled{opacity:.55;cursor:default}
+  .btn-ghost{background:transparent;border:1px solid var(--bd2);color:var(--text)}
+  .btn-ghost:hover{background:var(--bg-c)}
+  .btn-small{width:auto;padding:9px 16px;font-size:11px;margin-top:0}
+
+  .msg{margin-top:16px;font-size:14px;padding:12px 14px;border-radius:4px}
+  .msg-ok{background:rgba(143,174,155,.12);color:var(--ok);border:1px solid rgba(143,174,155,.3)}
+  .msg-err{background:var(--red-d);color:#E58B8D;border:1px solid rgba(204,39,42,.3)}
+
+  .greet{font-size:14px;color:var(--t2);margin-bottom:4px}
+  .section-title{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:16px}
+
+  .booking-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--bd)}
+  .booking-row:last-child{border-bottom:none}
+  .b-name{font-weight:600;font-size:15px}
+  .b-date{color:var(--t2);font-size:13px;margin-top:2px}
+  .b-status{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:3px;white-space:nowrap}
+  .b-status.accepted,.b-status.active{background:rgba(143,174,155,.15);color:var(--ok)}
+  .b-status.cancelled{background:var(--red-d);color:#E58B8D}
+  .b-actions{display:flex;gap:8px;margin-top:8px}
+
+  .payment-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--bd)}
+  .payment-row:last-child{border-bottom:none}
+  .p-desc{font-size:14px}
+  .p-date{color:var(--t2);font-size:12px;margin-top:2px}
+  .p-amount{font-weight:600;font-size:15px;white-space:nowrap}
+
+  .empty{color:var(--t3);font-size:14px;padding:12px 0}
+
+  .skeleton{opacity:.5}
+
+  #cal-embed-overlay{display:none;position:fixed;inset:0;background:rgba(10,9,8,.85);z-index:1000;align-items:center;justify-content:center;padding:20px}
+  #cal-embed-overlay.open{display:flex}
+  .cal-embed-box{background:var(--bg-s);border:1px solid var(--bd);border-radius:6px;width:100%;max-width:640px;max-height:85vh;overflow:auto;padding:20px;position:relative}
+  .cal-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;line-height:1}
+  .cal-close:hover{color:var(--text)}
+  #cal-embed-target{min-height:400px}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="rebound-logo.png" alt="" onerror="this.style.display='none'">
+    <span>Rebound<b style="color:var(--red)">.</b></span>
+  </a>
+  <a href="index.html" class="nav-back">&larr; Back to site</a>
+</nav>
+
+<main>
+
+  <!-- ============================= LOGIN ============================= -->
+  <section id="login-view" class="card">
+    <h1>My Account</h1>
+    <p class="lede">Enter the email you booked with and we'll send you a one-time link to sign in — no password needed.</p>
+
+    <form id="login-form">
+      <label for="login-email">Email address</label>
+      <input type="email" id="login-email" required autocomplete="email" placeholder="you@example.com">
+      <button type="submit" class="btn" id="login-btn">Send me a login link</button>
+    </form>
+
+    <div id="login-msg"></div>
+  </section>
+
+  <!-- ============================ DASHBOARD =========================== -->
+  <section id="dashboard-view" style="display:none">
+
+    <div class="card">
+      <p class="greet" id="dash-greeting">&nbsp;</p>
+      <h1>Your Bookings</h1>
+      <div style="margin-top:20px" id="bookings-list">
+        <p class="empty skeleton">Loading your bookings&hellip;</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Payments &amp; Receipts</p>
+      <div id="payments-list">
+        <p class="empty skeleton">Loading your payments&hellip;</p>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <button type="button" class="btn btn-ghost" id="logout-btn">Sign out</button>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- Reschedule/Cancel embed overlay (2026-11-07, Josh's ask: "reschedule/cancel
+     from inside the portal") -- intentionally embeds Cal.com's OWN reschedule
+     and cancel pages rather than rebuilding that flow against the Cal.com API
+     directly. calcom-webhook already listens for Cal.com's native
+     BOOKING_RESCHEDULED / BOOKING_CANCELLED events to apply Josh's late-fee
+     rules (see schema.sql's late_cancellation_fee_pct/late_reschedule_fee_pct
+     columns) -- reusing Cal.com's own flow here means that logic never needs
+     touching or duplicating. The patient never leaves this page visually;
+     under the hood it's Cal.com's booking-management UI in an iframe, same
+     technique the main booking flow on index.html already uses for Cal(" inline"). -->
+<div id="cal-embed-overlay">
+  <div class="cal-embed-box">
+    <button type="button" class="cal-close" id="cal-embed-close" aria-label="Close">&times;</button>
+    <div id="cal-embed-target"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Same project, same anon/publishable key as the staff admin app's
+// js/config.js -- safe to embed client-side by design (RLS is what actually
+// gates access; see schema.sql's "patients read own ..." policies).
+const SUPABASE_URL = "https://udoyiifdqwbgihwbosbn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkb3lpaWZkcXdiZ2lod2Jvc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTEzMzksImV4cCI6MjEwMDcyNzMzOX0.Hh9045hcAI4fK2rUtR-qZTHMp3Ab3aNUxFRbvgjTnHE";
+const EDGE_FUNCTIONS_URL = "https://udoyiifdqwbgihwbosbn.supabase.co/functions/v1";
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function fmtMoney(amountMinor, currency) {
+  if (amountMinor == null) return "—";
+  const amount = amountMinor / 100;
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency: (currency || "GBP").toUpperCase() }).format(amount);
+}
+
+// ---------------------------------------------------------------------------
+// Login (magic link)
+// ---------------------------------------------------------------------------
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("login-email").value.trim();
+  const btn = document.getElementById("login-btn");
+  const msgEl = document.getElementById("login-msg");
+  if (!email) return;
+
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+  msgEl.innerHTML = "";
+
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href },
+  });
+
+  btn.disabled = false;
+  btn.textContent = "Send me a login link";
+
+  if (error) {
+    msgEl.innerHTML = `<div class="msg msg-err">${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  msgEl.innerHTML = `<div class="msg msg-ok">Check your email — we've sent a link to ${escapeHtml(email)}. Click it to sign in.</div>`;
+});
+
+document.getElementById("logout-btn").addEventListener("click", async () => {
+  await sb.auth.signOut();
+  window.location.href = "my-account.html";
+});
+
+// ---------------------------------------------------------------------------
+// Dashboard
+// ---------------------------------------------------------------------------
+async function callPatientPortal(action, extra = {}) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error("No session");
+  const res = await fetch(`${EDGE_FUNCTIONS_URL}/patient-portal`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ action, ...extra }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
+  return json;
+}
+
+function renderBookings(bookings) {
+  const el = document.getElementById("bookings-list");
+  if (!bookings.length) {
+    el.innerHTML = `<p class="empty">No bookings yet — <a href="index.html#book">book your first appointment</a>.</p>`;
+    return;
+  }
+  const now = Date.now();
+  el.innerHTML = bookings.map((b) => {
+    const isUpcoming = b.start_time && new Date(b.start_time).getTime() > now && (b.status || "").toUpperCase() !== "CANCELLED";
+    const statusClass = (b.status || "unknown").toLowerCase();
+    return `
+      <div class="booking-row">
+        <div>
+          <div class="b-name">${escapeHtml(b.title) || "Appointment"}</div>
+          <div class="b-date">${fmtDateTime(b.start_time)}</div>
+          ${isUpcoming ? `
+            <div class="b-actions">
+              <button type="button" class="btn btn-ghost btn-small" data-reschedule="${escapeHtml(b.cal_com_booking_uid)}">Reschedule</button>
+              <button type="button" class="btn btn-ghost btn-small" data-cancel="${escapeHtml(b.cal_com_booking_uid)}">Cancel</button>
+            </div>
+          ` : ""}
+        </div>
+        <span class="b-status ${escapeHtml(statusClass)}">${escapeHtml(b.status) || "Unknown"}</span>
+      </div>
+    `;
+  }).join("");
+
+  el.querySelectorAll("[data-reschedule]").forEach((btn) => {
+    btn.addEventListener("click", () => openCalEmbed(btn.dataset.reschedule, "reschedule"));
+  });
+  el.querySelectorAll("[data-cancel]").forEach((btn) => {
+    btn.addEventListener("click", () => openCalEmbed(btn.dataset.cancel, "cancel"));
+  });
+}
+
+function renderPayments(payments) {
+  const el = document.getElementById("payments-list");
+  if (!payments.length) {
+    el.innerHTML = `<p class="empty">No payments on file yet.</p>`;
+    return;
+  }
+  el.innerHTML = payments.map((p) => `
+    <div class="payment-row">
+      <div>
+        <div class="p-desc">${escapeHtml(p.description) || (p.kind === "cancellation_fee" ? "Cancellation fee" : "Session payment")}</div>
+        <div class="p-date">${fmtDateTime(p.created_at)} &middot; ${escapeHtml(p.status)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="p-amount">${fmtMoney(p.amount, p.currency)}</div>
+        ${p.receipt_url ? `<a href="${escapeHtml(p.receipt_url)}" target="_blank" rel="noopener" style="font-size:12px">View receipt &rarr;</a>` : ""}
+      </div>
+    </div>
+  `).join("");
+}
+
+async function loadDashboard() {
+  try {
+    const { patient, bookings, payments } = await callPatientPortal("get_dashboard");
+    document.getElementById("dash-greeting").textContent = patient
+      ? `Welcome back, ${patient.first_name}`
+      : "Welcome";
+    if (!patient) {
+      document.getElementById("bookings-list").innerHTML = `<p class="empty">We don't have a booking on file for this email yet — <a href="index.html#book">book your first appointment</a> and this page will fill in automatically.</p>`;
+      document.getElementById("payments-list").innerHTML = `<p class="empty">Nothing here yet.</p>`;
+      return;
+    }
+    renderBookings(bookings);
+    renderPayments(payments);
+  } catch (err) {
+    console.error("loadDashboard failed", err);
+    document.getElementById("bookings-list").innerHTML = `<p class="empty">Couldn't load your bookings right now — please try refreshing.</p>`;
+    document.getElementById("payments-list").innerHTML = "";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reschedule/Cancel — embeds Cal.com's own hosted page for this booking.
+// Cal.com's booking-management URLs are keyed by booking uid:
+//   https://cal.com/booking/<uid>?cancel=true|reschedule=true
+// ---------------------------------------------------------------------------
+function openCalEmbed(bookingUid, mode) {
+  if (!bookingUid) return;
+  const overlay = document.getElementById("cal-embed-overlay");
+  const target = document.getElementById("cal-embed-target");
+  const param = mode === "cancel" ? "cancel=true" : "reschedule=true";
+  target.innerHTML = `<iframe src="https://cal.com/booking/${encodeURIComponent(bookingUid)}?${param}" style="width:100%;height:70vh;border:0;border-radius:4px;background:#fff" title="${mode === "cancel" ? "Cancel" : "Reschedule"} booking"></iframe>`;
+  overlay.classList.add("open");
+}
+document.getElementById("cal-embed-close").addEventListener("click", () => {
+  document.getElementById("cal-embed-overlay").classList.remove("open");
+  document.getElementById("cal-embed-target").innerHTML = "";
+  // Refresh in case the patient just rescheduled/cancelled inside the embed.
+  loadDashboard();
+});
+
+// ---------------------------------------------------------------------------
+// Boot: show login or dashboard depending on session state, and react to a
+// magic-link redirect landing back on this exact page.
+// ---------------------------------------------------------------------------
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    document.getElementById("login-view").style.display = "none";
+    document.getElementById("dashboard-view").style.display = "block";
+    loadDashboard();
+  }
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN" && session) {
+    document.getElementById("login-view").style.display = "none";
+    document.getElementById("dashboard-view").style.display = "block";
+    loadDashboard();
+  }
+  if (event === "SIGNED_OUT") {
+    document.getElementById("login-view").style.display = "block";
+    document.getElementById("dashboard-view").style.display = "none";
+  }
+});
+
+boot();
+</script>
+
+</body>
+</html>
