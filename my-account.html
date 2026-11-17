@@ -77,6 +77,24 @@
 
   .empty{color:var(--t3);font-size:14px;padding:12px 0}
 
+  /* Rehab programme (2026-11-17) */
+  .prog-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .prog-pill{background:var(--bg-c);border:1px solid var(--bd2);color:var(--t2);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer}
+  .prog-pill.active{background:var(--red);border-color:var(--red);color:#fff}
+  .ex-card{border:1px solid var(--bd);border-radius:6px;padding:16px;margin-bottom:12px;background:var(--bg-c)}
+  .ex-name{font-weight:600;font-size:15px}
+  .ex-dosage{color:var(--t2);font-size:13px;margin-top:3px}
+  .ex-cues{color:var(--t2);font-size:13px;margin-top:8px;white-space:pre-wrap}
+  .ex-video-toggle{background:none;border:1px solid var(--bd2);color:var(--text);font-size:12px;padding:6px 12px;border-radius:4px;cursor:pointer;margin-top:10px}
+  .ex-video-box{position:relative;width:100%;padding-top:56.25%;margin-top:10px;border-radius:4px;overflow:hidden;background:#000;display:none}
+  .ex-video-box.open{display:block}
+  .ex-video-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .ex-log-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .ex-log-status{font-size:12px;color:var(--ok);font-weight:600}
+  .ex-log-status.skipped{color:var(--t2)}
+  .ex-felt-input{width:100%;margin-top:8px;background:var(--bg-s);border:1px solid var(--bd2);color:var(--text);padding:9px 11px;border-radius:4px;font-size:13px;font-family:inherit;display:none}
+  .ex-felt-input.open{display:block}
+
   .skeleton{opacity:.5}
 
   #cal-embed-overlay{display:none;position:fixed;inset:0;background:rgba(10,9,8,.85);z-index:1000;align-items:center;justify-content:center;padding:20px}
@@ -121,6 +139,19 @@
       <h1>Your Bookings</h1>
       <div style="margin-top:20px" id="bookings-list">
         <p class="empty skeleton">Loading your bookings&hellip;</p>
+      </div>
+    </div>
+
+    <!-- Rehab Programme (2026-11-17, Josh's ask: patients can view their
+         assigned exercise programme and log what they actually did) --
+         only appears once we know whether there's a programme to show, see
+         loadProgrammes() below, which hides this card entirely rather than
+         showing an empty state when a patient has never been given one. -->
+    <div class="card" id="programme-card" style="display:none">
+      <p class="section-title">Your Rehab Programme</p>
+      <div id="programme-pills" class="prog-pills"></div>
+      <div id="programme-exercises">
+        <p class="empty skeleton">Loading your programme&hellip;</p>
       </div>
     </div>
 
@@ -309,6 +340,173 @@ async function loadDashboard() {
     document.getElementById("bookings-list").innerHTML = `<p class="empty">Couldn't load your bookings right now — please try refreshing.</p>`;
     document.getElementById("payments-list").innerHTML = "";
   }
+  loadProgrammes();
+}
+
+// ---------------------------------------------------------------------------
+// Rehab programme (2026-11-17) -- "select their programmes and enter
+// information to confirm what they did, if they completed the exercise" per
+// Josh's own words. The programme card stays hidden entirely (never an
+// empty state) when a patient has no active programme, since most patients
+// won't have one -- see loadProgrammes() below.
+// ---------------------------------------------------------------------------
+let currentProgrammes = [];
+let currentProgrammeId = null;
+
+// Same id-extraction approach as js/exercise-picker.js in the staff app --
+// kept as a separate copy here rather than a shared <script src>, since
+// this repo (rebound-landing-page) is a different deploy target/site to
+// the staff app (patient-portal) and the two have never shared JS files.
+function myAccountYoutubeId(url) {
+  if (!url || typeof url !== "string") return null;
+  const patterns = [
+    /youtu\.be\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/watch\?.*\bv=([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+  ];
+  for (const re of patterns) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function loadProgrammes() {
+  const cardEl = document.getElementById("programme-card");
+  try {
+    const { programmes } = await callPatientPortal("get_programmes");
+    currentProgrammes = programmes || [];
+    if (!currentProgrammes.length) {
+      cardEl.style.display = "none";
+      return;
+    }
+    cardEl.style.display = "block";
+    currentProgrammeId = currentProgrammes[0].id;
+    renderProgrammePills();
+    renderProgrammeExercises();
+  } catch (err) {
+    console.error("loadProgrammes failed", err);
+    // Don't hide the card on a real error (vs. "no programme") -- a
+    // patient who knows they have one should see that something went
+    // wrong, not have it silently vanish.
+    cardEl.style.display = "block";
+    document.getElementById("programme-pills").innerHTML = "";
+    document.getElementById("programme-exercises").innerHTML = `<p class="empty">Couldn't load your programme right now — please try refreshing.</p>`;
+  }
+}
+
+function renderProgrammePills() {
+  const pillsEl = document.getElementById("programme-pills");
+  if (currentProgrammes.length < 2) { pillsEl.innerHTML = ""; return; }
+  pillsEl.innerHTML = currentProgrammes.map((p) => `
+    <button type="button" class="prog-pill${p.id === currentProgrammeId ? " active" : ""}" data-prog="${p.id}">${escapeHtml(p.name)}</button>
+  `).join("");
+  pillsEl.querySelectorAll("[data-prog]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentProgrammeId = btn.dataset.prog;
+      renderProgrammePills();
+      renderProgrammeExercises();
+    });
+  });
+}
+
+function renderProgrammeExercises() {
+  const listEl = document.getElementById("programme-exercises");
+  const programme = currentProgrammes.find((p) => p.id === currentProgrammeId);
+  if (!programme || !programme.exercises.length) {
+    listEl.innerHTML = `<p class="empty">Nothing in this programme yet.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = programme.exercises.map((ex) => {
+    const videoId = myAccountYoutubeId(ex.video_url);
+    const dosageBits = [ex.sets_reps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
+    const log = ex.today_log;
+    return `
+      <div class="ex-card" data-ex="${ex.id}">
+        <div class="ex-name">${escapeHtml(ex.name || "Exercise")}</div>
+        ${dosageBits.length ? `<div class="ex-dosage">${escapeHtml(dosageBits.join(" · "))}</div>` : ""}
+        ${ex.coaching_cues ? `<div class="ex-cues">${escapeHtml(ex.coaching_cues)}</div>` : ""}
+        ${ex.notes ? `<div class="ex-cues">${escapeHtml(ex.notes)}</div>` : ""}
+        ${videoId ? `
+          <button type="button" class="ex-video-toggle" data-video-toggle>Watch video</button>
+          <div class="ex-video-box" data-video-box></div>
+        ` : ""}
+
+        <div class="ex-log-row" data-log-controls>
+          ${log
+            ? `<span class="ex-log-status${log.completed ? "" : " skipped"}">${log.completed ? "✓ Logged done today" : "Logged as skipped today"}</span>
+               <button type="button" class="btn btn-ghost btn-small" data-log-again>Log again</button>`
+            : `<button type="button" class="btn btn-ghost btn-small" data-log="done">✓ Done today</button>
+               <button type="button" class="btn btn-ghost btn-small" data-log="skip">Skip today</button>`}
+        </div>
+        <textarea class="ex-felt-input" placeholder="How did it feel? (optional)" data-felt></textarea>
+      </div>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll("[data-video-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const card = btn.closest(".ex-card");
+      const box = card.querySelector("[data-video-box]");
+      const ex = programme.exercises.find((e) => e.id === card.dataset.ex);
+      const videoId = myAccountYoutubeId(ex.video_url);
+      const isOpen = box.classList.contains("open");
+      if (isOpen) {
+        box.classList.remove("open");
+        box.innerHTML = ""; // stop playback, don't just hide it
+        btn.textContent = "Watch video";
+      } else {
+        box.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        box.classList.add("open");
+        btn.textContent = "Hide video";
+      }
+    });
+  });
+
+  listEl.querySelectorAll("[data-log-again]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const card = btn.closest(".ex-card");
+      card.querySelector("[data-log-controls]").innerHTML = `
+        <button type="button" class="btn btn-ghost btn-small" data-log="done">✓ Done today</button>
+        <button type="button" class="btn btn-ghost btn-small" data-log="skip">Skip today</button>
+      `;
+      wireLogButtons(card);
+    });
+  });
+
+  listEl.querySelectorAll(".ex-card").forEach((card) => wireLogButtons(card));
+}
+
+function wireLogButtons(card) {
+  card.querySelectorAll("[data-log]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const feltEl = card.querySelector("[data-felt]");
+      // First click on either button just reveals the "how did it feel"
+      // box and arms this button as the one that will actually submit --
+      // keeps the common case (tap Done, you're finished) to one tap while
+      // still offering the optional note before it's sent.
+      if (!feltEl.classList.contains("open")) {
+        feltEl.classList.add("open");
+        feltEl.dataset.pendingCompleted = btn.dataset.log === "done" ? "1" : "0";
+        card.querySelectorAll("[data-log]").forEach((b) => { b.textContent = b === btn ? "Save" : ""; if (b !== btn) b.style.display = "none"; });
+        return;
+      }
+      btn.disabled = true;
+      try {
+        await callPatientPortal("log_exercise", {
+          patient_programme_exercise_id: card.dataset.ex,
+          completed: feltEl.dataset.pendingCompleted === "1",
+          how_it_felt: feltEl.value,
+        });
+        loadProgrammes();
+      } catch (err) {
+        alert(err.message || "Couldn't save that -- try again.");
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
