@@ -95,6 +95,33 @@
   .ex-felt-input{width:100%;margin-top:8px;background:var(--bg-s);border:1px solid var(--bd2);color:var(--text);padding:9px 11px;border-radius:4px;font-size:13px;font-family:inherit;display:none}
   .ex-felt-input.open{display:block}
 
+  /* Weekly planner (2026-11-19, task #269) -- Today-by-default day view with
+     a week nav + 7-day strip for browsing the rest of the programme. */
+  .day-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .day-nav .week-label{font-size:13px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
+  .day-nav button[data-week-prev],.day-nav button[data-week-next]{background:transparent;border:1px solid var(--bd2);color:var(--text);font-size:12px;padding:6px 10px;border-radius:4px;cursor:pointer}
+  .day-nav button:disabled{opacity:.35;cursor:default}
+  .today-jump{background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;text-decoration:underline;padding:0}
+  .day-strip{display:flex;gap:6px;overflow-x:auto;margin-bottom:18px;padding-bottom:2px}
+  .day-chip{flex:0 0 auto;background:var(--bg-c);border:1px solid var(--bd2);color:var(--t2);padding:8px 10px;border-radius:6px;font-size:12px;text-align:center;cursor:pointer;min-width:56px}
+  .day-chip .dc-day{font-weight:700;display:block}
+  .day-chip .dc-date{font-size:10px;color:var(--t3);display:block;margin-top:2px}
+  .day-chip.active{background:var(--red);border-color:var(--red);color:#fff}
+  .day-chip.active .dc-date{color:rgba(255,255,255,.75)}
+  .day-chip.is-today{box-shadow:0 0 0 2px var(--ok) inset}
+
+  .row-section{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--t2);margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bd)}
+  .row-section:first-child{margin-top:0}
+  .row-note{color:var(--t2);font-size:13px;font-style:italic;background:var(--bg-c);border:1px solid var(--bd);border-radius:6px;padding:10px 12px;margin-bottom:12px}
+
+  .group-block{border:1px solid var(--bd2);border-left:3px solid var(--red);border-radius:6px;padding:12px;margin-bottom:12px;background:var(--bg-c)}
+  .group-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--red-d);color:#E58B8D;margin-bottom:8px}
+  .group-meta{font-size:12px;color:var(--t2);margin-left:8px}
+  .group-block .ex-card{background:var(--bg-s);margin-bottom:8px}
+  .group-block .ex-card:last-child{margin-bottom:0}
+
+  .complete-banner{background:rgba(143,174,155,.12);border:1px solid rgba(143,174,155,.3);color:var(--ok);padding:10px 14px;border-radius:4px;font-size:13px;margin-bottom:14px}
+
   .skeleton{opacity:.5}
 
   #cal-embed-overlay{display:none;position:fixed;inset:0;background:rgba(10,9,8,.85);z-index:1000;align-items:center;justify-content:center;padding:20px}
@@ -148,8 +175,13 @@
          loadProgrammes() below, which hides this card entirely rather than
          showing an empty state when a patient has never been given one. -->
     <div class="card" id="programme-card" style="display:none">
-      <p class="section-title">Your Rehab Programme</p>
+      <div class="row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px">
+        <p class="section-title" style="margin-bottom:0">Your Rehab Programme</p>
+        <button type="button" class="btn btn-ghost btn-small" id="programme-pdf-btn">Download PDF</button>
+      </div>
       <div id="programme-pills" class="prog-pills"></div>
+      <div id="programme-week-nav" class="day-nav"></div>
+      <div id="programme-day-strip" class="day-strip"></div>
       <div id="programme-exercises">
         <p class="empty skeleton">Loading your programme&hellip;</p>
       </div>
@@ -349,9 +381,19 @@ async function loadDashboard() {
 // Josh's own words. The programme card stays hidden entirely (never an
 // empty state) when a patient has no active programme, since most patients
 // won't have one -- see loadProgrammes() below.
+//
+// WEEKLY PLANNER (2026-11-19, task #269) -- defaults to "Today" (viewWeek/
+// viewDay set from the get_programmes response's today_week_number/
+// today_day_number) with a week nav + 7-day strip to browse the rest of
+// the programme. Rows can be a standalone exercise, a Section/Note divider,
+// or a Superset/Circuit/AMRAP/EMOM/RFT group -- all shaped server-side by
+// the patient-portal Edge Function (see its shapeDayRows), so this file
+// only has to render what it's given.
 // ---------------------------------------------------------------------------
 let currentProgrammes = [];
 let currentProgrammeId = null;
+let viewWeek = null;
+let viewDay = null;
 
 // Same id-extraction approach as js/exercise-picker.js in the staff app --
 // kept as a separate copy here rather than a shared <script src>, since
@@ -382,9 +424,16 @@ async function loadProgrammes() {
       return;
     }
     cardEl.style.display = "block";
-    currentProgrammeId = currentProgrammes[0].id;
-    renderProgrammePills();
-    renderProgrammeExercises();
+    if (!currentProgrammeId || !currentProgrammes.find((p) => p.id === currentProgrammeId)) {
+      selectProgramme(currentProgrammes[0].id);
+    } else {
+      // Reload without resetting where the patient was browsing (e.g. right
+      // after they log an exercise, which calls loadProgrammes() again).
+      renderProgrammePills();
+      renderDayNav();
+      renderDayStrip();
+      renderProgrammeExercises();
+    }
   } catch (err) {
     console.error("loadProgrammes failed", err);
     // Don't hide the card on a real error (vs. "no programme") -- a
@@ -392,8 +441,24 @@ async function loadProgrammes() {
     // wrong, not have it silently vanish.
     cardEl.style.display = "block";
     document.getElementById("programme-pills").innerHTML = "";
+    document.getElementById("programme-week-nav").innerHTML = "";
+    document.getElementById("programme-day-strip").innerHTML = "";
     document.getElementById("programme-exercises").innerHTML = `<p class="empty">Couldn't load your programme right now — please try refreshing.</p>`;
   }
+}
+
+// Switching programmes jumps back to THAT programme's own "today" --
+// different programmes can have different started_at dates, so one
+// programme's today is rarely the same week/day position as another's.
+function selectProgramme(id) {
+  currentProgrammeId = id;
+  const programme = currentProgrammes.find((p) => p.id === id);
+  viewWeek = programme ? programme.today_week_number : 1;
+  viewDay = programme ? programme.today_day_number : 1;
+  renderProgrammePills();
+  renderDayNav();
+  renderDayStrip();
+  renderProgrammeExercises();
 }
 
 function renderProgrammePills() {
@@ -403,55 +468,140 @@ function renderProgrammePills() {
     <button type="button" class="prog-pill${p.id === currentProgrammeId ? " active" : ""}" data-prog="${p.id}">${escapeHtml(p.name)}</button>
   `).join("");
   pillsEl.querySelectorAll("[data-prog]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      currentProgrammeId = btn.dataset.prog;
-      renderProgrammePills();
-      renderProgrammeExercises();
-    });
+    btn.addEventListener("click", () => selectProgramme(btn.dataset.prog));
   });
+}
+
+function currentProgramme() { return currentProgrammes.find((p) => p.id === currentProgrammeId); }
+function currentWeekObj() {
+  const programme = currentProgramme();
+  return programme ? programme.weeks.find((w) => w.week_number === viewWeek) : null;
+}
+function currentDayObj() {
+  const week = currentWeekObj();
+  return week ? week.days.find((d) => d.day_number === viewDay) : null;
+}
+
+function formatChipDate(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+function renderDayNav() {
+  const programme = currentProgramme();
+  const navEl = document.getElementById("programme-week-nav");
+  if (!programme) { navEl.innerHTML = ""; return; }
+  const isToday = viewWeek === programme.today_week_number && viewDay === programme.today_day_number;
+  navEl.innerHTML = `
+    <button type="button" data-week-prev ${viewWeek <= 1 ? "disabled" : ""}>&larr; Prev week</button>
+    <span class="week-label">Week ${viewWeek} of ${programme.total_weeks}${isToday ? "" : ` &middot; <button type="button" class="today-jump" data-jump-today>Jump to today</button>`}</span>
+    <button type="button" data-week-next ${viewWeek >= programme.total_weeks ? "disabled" : ""}>Next week &rarr;</button>
+  `;
+  const prevBtn = navEl.querySelector("[data-week-prev]");
+  if (prevBtn) prevBtn.addEventListener("click", () => { viewWeek -= 1; renderDayNav(); renderDayStrip(); renderProgrammeExercises(); });
+  const nextBtn = navEl.querySelector("[data-week-next]");
+  if (nextBtn) nextBtn.addEventListener("click", () => { viewWeek += 1; renderDayNav(); renderDayStrip(); renderProgrammeExercises(); });
+  const jumpBtn = navEl.querySelector("[data-jump-today]");
+  if (jumpBtn) jumpBtn.addEventListener("click", () => {
+    viewWeek = programme.today_week_number;
+    viewDay = programme.today_day_number;
+    renderDayNav(); renderDayStrip(); renderProgrammeExercises();
+  });
+}
+
+function renderDayStrip() {
+  const programme = currentProgramme();
+  const stripEl = document.getElementById("programme-day-strip");
+  const week = currentWeekObj();
+  if (!programme || !week) { stripEl.innerHTML = ""; return; }
+  stripEl.innerHTML = week.days.map((d) => {
+    const isToday = viewWeek === programme.today_week_number && d.day_number === programme.today_day_number;
+    const isActive = d.day_number === viewDay;
+    return `
+      <button type="button" class="day-chip${isActive ? " active" : ""}${isToday ? " is-today" : ""}" data-day="${d.day_number}">
+        <span class="dc-day">Day ${d.day_number}</span>
+        <span class="dc-date">${formatChipDate(d.date)}</span>
+      </button>
+    `;
+  }).join("");
+  stripEl.querySelectorAll("[data-day]").forEach((btn) => {
+    btn.addEventListener("click", () => { viewDay = Number(btn.dataset.day); renderDayStrip(); renderProgrammeExercises(); });
+  });
+}
+
+// One exercise card's markup -- used both standalone and nested inside a
+// group block, which is why wiring (video/log) below just queries for
+// every ".ex-card" regardless of nesting rather than two separate passes.
+function exerciseCardHtml(ex) {
+  const videoId = myAccountYoutubeId(ex.video_url);
+  const dosageBits = [ex.sets_reps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
+  const log = ex.log;
+  return `
+    <div class="ex-card" data-ex="${ex.id}">
+      <div class="ex-name">${escapeHtml(ex.name || "Exercise")}</div>
+      ${dosageBits.length ? `<div class="ex-dosage">${escapeHtml(dosageBits.join(" · "))}</div>` : ""}
+      ${ex.coaching_cues ? `<div class="ex-cues">${escapeHtml(ex.coaching_cues)}</div>` : ""}
+      ${ex.notes ? `<div class="ex-cues">${escapeHtml(ex.notes)}</div>` : ""}
+      ${videoId ? `
+        <button type="button" class="ex-video-toggle" data-video-toggle data-video-id="${videoId}">Watch video</button>
+        <div class="ex-video-box" data-video-box></div>
+      ` : ""}
+
+      <div class="ex-log-row" data-log-controls>
+        ${log
+          ? `<span class="ex-log-status${log.completed ? "" : " skipped"}">${log.completed ? "✓ Logged done" : "Logged as skipped"}</span>
+             <button type="button" class="btn btn-ghost btn-small" data-log-again>Log again</button>`
+          : `<button type="button" class="btn btn-ghost btn-small" data-log="done">✓ Done</button>
+             <button type="button" class="btn btn-ghost btn-small" data-log="skip">Skip</button>`}
+      </div>
+      <textarea class="ex-felt-input" placeholder="How did it feel? (optional)" data-felt></textarea>
+    </div>
+  `;
 }
 
 function renderProgrammeExercises() {
   const listEl = document.getElementById("programme-exercises");
-  const programme = currentProgrammes.find((p) => p.id === currentProgrammeId);
-  if (!programme || !programme.exercises.length) {
+  const programme = currentProgramme();
+  const day = currentDayObj();
+  if (!programme || !day) {
     listEl.innerHTML = `<p class="empty">Nothing in this programme yet.</p>`;
     return;
   }
 
-  listEl.innerHTML = programme.exercises.map((ex) => {
-    const videoId = myAccountYoutubeId(ex.video_url);
-    const dosageBits = [ex.sets_reps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
-    const log = ex.today_log;
-    return `
-      <div class="ex-card" data-ex="${ex.id}">
-        <div class="ex-name">${escapeHtml(ex.name || "Exercise")}</div>
-        ${dosageBits.length ? `<div class="ex-dosage">${escapeHtml(dosageBits.join(" · "))}</div>` : ""}
-        ${ex.coaching_cues ? `<div class="ex-cues">${escapeHtml(ex.coaching_cues)}</div>` : ""}
-        ${ex.notes ? `<div class="ex-cues">${escapeHtml(ex.notes)}</div>` : ""}
-        ${videoId ? `
-          <button type="button" class="ex-video-toggle" data-video-toggle>Watch video</button>
-          <div class="ex-video-box" data-video-box></div>
-        ` : ""}
+  const completeBanner = programme.is_complete
+    ? `<p class="complete-banner">You've reached the end of this ${programme.total_weeks}-week programme — nice work. You can still look back over any week above.</p>`
+    : "";
 
-        <div class="ex-log-row" data-log-controls>
-          ${log
-            ? `<span class="ex-log-status${log.completed ? "" : " skipped"}">${log.completed ? "✓ Logged done today" : "Logged as skipped today"}</span>
-               <button type="button" class="btn btn-ghost btn-small" data-log-again>Log again</button>`
-            : `<button type="button" class="btn btn-ghost btn-small" data-log="done">✓ Done today</button>
-               <button type="button" class="btn btn-ghost btn-small" data-log="skip">Skip today</button>`}
+  if (!day.rows.length) {
+    listEl.innerHTML = `${completeBanner}<p class="empty">Rest day — nothing scheduled.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = completeBanner + day.rows.map((row) => {
+    if (row.kind === "section") return `<div class="row-section">${escapeHtml(row.label)}</div>`;
+    if (row.kind === "note") return `<div class="row-note">${escapeHtml(row.label)}</div>`;
+    if (row.kind === "group") {
+      const meta = row.format_meta || {};
+      let metaText = "";
+      if (row.group_type === "amrap") metaText = `${meta.duration_minutes || 20} min AMRAP`;
+      else if (row.group_type === "emom") metaText = `Every ${meta.interval_seconds || 60}s &times; ${meta.rounds || 10}`;
+      else if (row.group_type === "rft") metaText = `${escapeHtml(meta.target || "")} for time${meta.time_cap_minutes ? ` &middot; cap ${meta.time_cap_minutes} min` : ""}`;
+      return `
+        <div class="group-block">
+          <span class="group-badge">${escapeHtml((row.group_type || "").toUpperCase())}</span>
+          ${metaText ? `<span class="group-meta">${metaText}</span>` : ""}
+          ${row.exercises.map(exerciseCardHtml).join("")}
         </div>
-        <textarea class="ex-felt-input" placeholder="How did it feel? (optional)" data-felt></textarea>
-      </div>
-    `;
+      `;
+    }
+    return exerciseCardHtml(row);
   }).join("");
 
   listEl.querySelectorAll("[data-video-toggle]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const card = btn.closest(".ex-card");
       const box = card.querySelector("[data-video-box]");
-      const ex = programme.exercises.find((e) => e.id === card.dataset.ex);
-      const videoId = myAccountYoutubeId(ex.video_url);
+      const videoId = btn.dataset.videoId;
       const isOpen = box.classList.contains("open");
       if (isOpen) {
         box.classList.remove("open");
@@ -469,8 +619,8 @@ function renderProgrammeExercises() {
     btn.addEventListener("click", () => {
       const card = btn.closest(".ex-card");
       card.querySelector("[data-log-controls]").innerHTML = `
-        <button type="button" class="btn btn-ghost btn-small" data-log="done">✓ Done today</button>
-        <button type="button" class="btn btn-ghost btn-small" data-log="skip">Skip today</button>
+        <button type="button" class="btn btn-ghost btn-small" data-log="done">✓ Done</button>
+        <button type="button" class="btn btn-ghost btn-small" data-log="skip">Skip</button>
       `;
       wireLogButtons(card);
     });
@@ -478,6 +628,81 @@ function renderProgrammeExercises() {
 
   listEl.querySelectorAll(".ex-card").forEach((card) => wireLogButtons(card));
 }
+
+// ---------------------------------------------------------------------------
+// Download PDF (task #271) -- same browser print-to-PDF approach as the
+// admin side (js/patient-programme.js's ppgOpenPdfWindow): no library, no
+// Edge Function, just a clean print-only tab with "Save as PDF" as a
+// built-in print destination. Reads straight off the already-shaped
+// weeks/days/rows the patient-portal function returns -- no re-grouping
+// needed here.
+// ---------------------------------------------------------------------------
+function myAccountPdfRenderExercise(ex) {
+  const dosageBits = [ex.sets_reps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
+  return `
+    <div class="pdf-ex">
+      <div class="pdf-ex-name">${escapeHtml(ex.name || "Exercise")}</div>
+      ${dosageBits.length ? `<div class="pdf-ex-dosage">${escapeHtml(dosageBits.join(" · "))}</div>` : ""}
+      ${ex.notes ? `<div class="pdf-ex-notes">${escapeHtml(ex.notes)}</div>` : ""}
+    </div>
+  `;
+}
+
+function myAccountOpenPdfWindow() {
+  const programme = currentProgramme();
+  if (!programme) return;
+
+  const weeksHtml = programme.weeks.map((week) => {
+    const daysHtml = week.days.map((day) => {
+      if (!day.rows.length) return "";
+      const rowsHtml = day.rows.map((row) => {
+        if (row.kind === "section") return `<div class="pdf-section">${escapeHtml(row.label)}</div>`;
+        if (row.kind === "note") return `<div class="pdf-note">${escapeHtml(row.label)}</div>`;
+        if (row.kind === "group") {
+          return `<div class="pdf-group"><span class="pdf-group-badge">${escapeHtml((row.group_type || "").toUpperCase())}</span>${row.exercises.map(myAccountPdfRenderExercise).join("")}</div>`;
+        }
+        return myAccountPdfRenderExercise(row);
+      }).join("");
+      return `<div class="pdf-day"><h3>Day ${day.day_number} &middot; ${formatChipDate(day.date)}</h3>${rowsHtml}</div>`;
+    }).join("");
+    if (!daysHtml.trim()) return "";
+    return `<section class="pdf-week"><h2>Week ${week.week_number}</h2>${daysHtml}</section>`;
+  }).join("");
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(programme.name)}</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;color:#222;padding:24px;max-width:760px;margin:0 auto;}
+  h1{font-size:22px;margin-bottom:2px;}
+  .pdf-sub{color:#666;font-size:13px;margin-bottom:24px;}
+  .pdf-week{margin-bottom:22px;page-break-inside:avoid;}
+  .pdf-week h2{font-size:16px;border-bottom:2px solid #CC272A;padding-bottom:4px;}
+  .pdf-day{margin:10px 0 14px 10px;}
+  .pdf-day h3{font-size:13px;color:#555;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+  .pdf-ex{margin-bottom:8px;padding-left:10px;border-left:3px solid #E3E3E3;}
+  .pdf-ex-name{font-weight:bold;font-size:13px;}
+  .pdf-ex-dosage{color:#555;font-size:12px;}
+  .pdf-ex-notes{color:#555;font-size:12px;font-style:italic;}
+  .pdf-section{font-weight:bold;font-size:13px;text-transform:uppercase;color:#777;margin:10px 0 4px;}
+  .pdf-note{font-style:italic;color:#555;font-size:12px;background:#FAFAFA;padding:6px 8px;border-radius:4px;margin-bottom:8px;}
+  .pdf-group{border:1px solid #E3E3E3;border-left:3px solid #CC272A;border-radius:4px;padding:8px;margin-bottom:8px;}
+  .pdf-group-badge{font-size:11px;font-weight:bold;text-transform:uppercase;color:#B4780A;}
+  @media print { body{padding:0;} }
+</style>
+</head><body>
+  <h1>${escapeHtml(programme.name)}</h1>
+  <div class="pdf-sub">${programme.total_weeks} week${programme.total_weeks === 1 ? "" : "s"} &middot; Rebound Medicine &amp; Performance</div>
+  ${weeksHtml || "<p>No exercises yet.</p>"}
+</body></html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) { alert("Please allow pop-ups to download the PDF."); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { try { win.print(); } catch (e) { /* ignore */ } }, 300);
+}
+
+document.getElementById("programme-pdf-btn").addEventListener("click", myAccountOpenPdfWindow);
 
 function wireLogButtons(card) {
   card.querySelectorAll("[data-log]").forEach((btn) => {
@@ -495,10 +720,16 @@ function wireLogButtons(card) {
       }
       btn.disabled = true;
       try {
+        // Logs against the date of the day currently being viewed, not
+        // necessarily today -- lets a patient browsing an earlier day in
+        // the week log it retroactively. See patient-portal's log_exercise
+        // action, which rejects a future date.
+        const day = currentDayObj();
         await callPatientPortal("log_exercise", {
           patient_programme_exercise_id: card.dataset.ex,
           completed: feltEl.dataset.pendingCompleted === "1",
           how_it_felt: feltEl.value,
+          log_date: day ? day.date : undefined,
         });
         loadProgrammes();
       } catch (err) {
