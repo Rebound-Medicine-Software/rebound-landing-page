@@ -85,7 +85,6 @@
   .ex-name{font-weight:600;font-size:15px}
   .ex-dosage{color:var(--t2);font-size:13px;margin-top:3px}
   .ex-cues{color:var(--t2);font-size:13px;margin-top:8px;white-space:pre-wrap}
-  .ex-video-toggle{background:none;border:1px solid var(--bd2);color:var(--text);font-size:12px;padding:6px 12px;border-radius:4px;cursor:pointer;margin-top:10px}
   .ex-video-box{position:relative;width:100%;padding-top:56.25%;margin-top:10px;border-radius:4px;overflow:hidden;background:#000;display:none}
   .ex-video-box.open{display:block}
   .ex-video-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
@@ -534,8 +533,23 @@ function renderDayStrip() {
 // every ".ex-card" regardless of nesting rather than two separate passes.
 function exerciseCardHtml(ex) {
   const videoId = myAccountYoutubeId(ex.video_url);
-  const dosageBits = [ex.sets_reps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
+  const dosageBits = [
+    ex.sets_reps,
+    ex.tempo ? `tempo ${ex.tempo}` : null,
+    ex.rest ? `rest ${ex.rest}` : null,
+    ex.hold ? `hold ${ex.hold}` : null,
+    ex.resistance || null,
+    ex.side || null,
+    ex.distance || null,
+  ].filter(Boolean);
   const log = ex.log;
+  // Video now always expanded (2026-11-20, Josh's ask) rather than behind a
+  // "Watch video" tap -- the iframe is in the DOM straight away so there's
+  // no click needed to see it, but autoplay is deliberately left off (a
+  // day with several exercises would otherwise be several videos trying to
+  // play sound at once) and loading="lazy" means the browser doesn't
+  // actually fetch/decode it until it's scrolled near the viewport, so this
+  // doesn't cost load time for exercises further down the day's list.
   return `
     <div class="ex-card" data-ex="${ex.id}">
       <div class="ex-name">${escapeHtml(ex.name || "Exercise")}</div>
@@ -543,8 +557,9 @@ function exerciseCardHtml(ex) {
       ${ex.coaching_cues ? `<div class="ex-cues">${escapeHtml(ex.coaching_cues)}</div>` : ""}
       ${ex.notes ? `<div class="ex-cues">${escapeHtml(ex.notes)}</div>` : ""}
       ${videoId ? `
-        <button type="button" class="ex-video-toggle" data-video-toggle data-video-id="${videoId}">Watch video</button>
-        <div class="ex-video-box" data-video-box></div>
+        <div class="ex-video-box open">
+          <iframe src="https://www.youtube.com/embed/${videoId}" title="${escapeHtml(ex.name || "Exercise video")}" frameborder="0" allow="encrypted-media" allowfullscreen loading="lazy"></iframe>
+        </div>
       ` : ""}
 
       <div class="ex-log-row" data-log-controls>
@@ -596,24 +611,6 @@ function renderProgrammeExercises() {
     }
     return exerciseCardHtml(row);
   }).join("");
-
-  listEl.querySelectorAll("[data-video-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const card = btn.closest(".ex-card");
-      const box = card.querySelector("[data-video-box]");
-      const videoId = btn.dataset.videoId;
-      const isOpen = box.classList.contains("open");
-      if (isOpen) {
-        box.classList.remove("open");
-        box.innerHTML = ""; // stop playback, don't just hide it
-        btn.textContent = "Watch video";
-      } else {
-        box.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-        box.classList.add("open");
-        btn.textContent = "Hide video";
-      }
-    });
-  });
 
   listEl.querySelectorAll("[data-log-again]").forEach((btn) => {
     btn.addEventListener("click", () => {
