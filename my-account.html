@@ -393,6 +393,7 @@ let currentProgrammes = [];
 let currentProgrammeId = null;
 let viewWeek = null;
 let viewDay = null;
+let currentCustomFieldDefs = []; // id->label lookup for any custom dosage fields Josh has added, from get_programmes' custom_field_defs
 
 // Same id-extraction approach as js/exercise-picker.js in the staff app --
 // kept as a separate copy here rather than a shared <script src>, since
@@ -416,7 +417,8 @@ function myAccountYoutubeId(url) {
 async function loadProgrammes() {
   const cardEl = document.getElementById("programme-card");
   try {
-    const { programmes } = await callPatientPortal("get_programmes");
+    const { programmes, custom_field_defs } = await callPatientPortal("get_programmes");
+    currentCustomFieldDefs = custom_field_defs || [];
     currentProgrammes = programmes || [];
     if (!currentProgrammes.length) {
       cardEl.style.display = "none";
@@ -533,14 +535,26 @@ function renderDayStrip() {
 // every ".ex-card" regardless of nesting rather than two separate passes.
 function exerciseCardHtml(ex) {
   const videoId = myAccountYoutubeId(ex.video_url);
+  // sets/reps falls back to the old combined sets_reps string for any row
+  // saved before the split (2026-11-20, Josh's ask) -- see schema.sql's
+  // comment on why sets_reps itself is never migrated.
+  const setsReps = (ex.sets || ex.reps) ? [ex.sets, ex.reps].filter(Boolean).join(" x ") : (ex.sets_reps || null);
+  const customBits = Object.entries(ex.custom_fields || {})
+    .filter(([, v]) => v)
+    .map(([id, v]) => {
+      const def = currentCustomFieldDefs.find((d) => d.id === id);
+      return def ? `${def.label} ${v}` : null;
+    })
+    .filter(Boolean);
   const dosageBits = [
-    ex.sets_reps,
+    setsReps,
     ex.tempo ? `tempo ${ex.tempo}` : null,
     ex.rest ? `rest ${ex.rest}` : null,
     ex.hold ? `hold ${ex.hold}` : null,
     ex.resistance || null,
     ex.side || null,
     ex.distance || null,
+    ...customBits,
   ].filter(Boolean);
   const log = ex.log;
   // Video now always expanded (2026-11-20, Josh's ask) rather than behind a
@@ -635,7 +649,8 @@ function renderProgrammeExercises() {
 // needed here.
 // ---------------------------------------------------------------------------
 function myAccountPdfRenderExercise(ex) {
-  const dosageBits = [ex.sets_reps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
+  const setsReps = (ex.sets || ex.reps) ? [ex.sets, ex.reps].filter(Boolean).join(" x ") : (ex.sets_reps || null);
+  const dosageBits = [setsReps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
   return `
     <div class="pdf-ex">
       <div class="pdf-ex-name">${escapeHtml(ex.name || "Exercise")}</div>
