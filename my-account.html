@@ -651,11 +651,20 @@ function renderProgrammeExercises() {
 function myAccountPdfRenderExercise(ex) {
   const setsReps = (ex.sets || ex.reps) ? [ex.sets, ex.reps].filter(Boolean).join(" x ") : (ex.sets_reps || null);
   const dosageBits = [setsReps, ex.tempo ? `tempo ${ex.tempo}` : null, ex.rest ? `rest ${ex.rest}` : null].filter(Boolean);
+  // Screenshots (2026-11-20, Josh's ask) -- only shown once all 3 frames
+  // exist for this exercise; otherwise this stays exactly as it was
+  // before (no image at all -- this self-print view never had the QR
+  // fallback the staff-side PDF has).
+  const screenshots = [ex.screenshot_start_url, ex.screenshot_mid_url, ex.screenshot_end_url].filter(Boolean);
+  const shotsBlock = screenshots.length === 3
+    ? `<div class="pdf-ex-shots">${screenshots.map((url) => `<img class="pdf-ex-shot" src="${escapeHtml(url)}" alt="" />`).join("")}</div>`
+    : "";
   return `
     <div class="pdf-ex">
       <div class="pdf-ex-name">${escapeHtml(ex.name || "Exercise")}</div>
       ${dosageBits.length ? `<div class="pdf-ex-dosage">${escapeHtml(dosageBits.join(" · "))}</div>` : ""}
       ${ex.notes ? `<div class="pdf-ex-notes">${escapeHtml(ex.notes)}</div>` : ""}
+      ${shotsBlock}
     </div>
   `;
 }
@@ -693,6 +702,8 @@ function myAccountOpenPdfWindow() {
   .pdf-ex{margin-bottom:8px;padding-left:10px;border-left:3px solid #E3E3E3;}
   .pdf-ex-name{font-weight:bold;font-size:13px;}
   .pdf-ex-dosage{color:#555;font-size:12px;}
+  .pdf-ex-shots{display:flex;gap:6px;margin-top:6px;}
+  .pdf-ex-shot{width:90px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #E3E3E3;}
   .pdf-ex-notes{color:#555;font-size:12px;font-style:italic;}
   .pdf-section{font-weight:bold;font-size:13px;text-transform:uppercase;color:#777;margin:10px 0 4px;}
   .pdf-note{font-style:italic;color:#555;font-size:12px;background:#FAFAFA;padding:6px 8px;border-radius:4px;margin-bottom:8px;}
